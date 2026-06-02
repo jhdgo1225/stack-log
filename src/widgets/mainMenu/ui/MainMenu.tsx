@@ -11,8 +11,8 @@ export function MainMenu() {
   const navigate = useNavigate();
 
   const handleGameStart = useMeasuredHandler("ui.mainMenu.start", () => {
-    startPageTransition("main", "game");
-    void navigate(APP_ROUTES.GAME);
+    startPageTransition("main", "character-select");
+    void navigate(APP_ROUTES.CHARACTER_SELECT);
   });
 
   const handleProfile = useMeasuredHandler("ui.mainMenu.profile", () => {
