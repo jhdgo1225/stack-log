@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useStartGame } from "../model/useStartGame";
 
 import { APP_ROUTES } from "@/shared/config/routes";
+import { useMeasuredHandler } from "@/shared/lib/performance/useMeasuredHandler";
+import { startPageTransition } from "@/shared/lib/performance/performanceTelemetry";
 import { Button } from "@/shared/ui/Button";
 
 type StartGameButtonProps = {
@@ -21,11 +23,12 @@ export const StartGameButton = ({
   const navigate = useNavigate();
   const { startGame } = useStartGame();
 
-  const handleClick = () => {
+  const handleClick = useMeasuredHandler("ui.startGameButton", () => {
     startGame();
     onAfterStart?.();
-    navigate(APP_ROUTES.GAME);
-  };
+    startPageTransition("main", "game");
+    void navigate(APP_ROUTES.GAME);
+  });
 
   return (
     <Button
