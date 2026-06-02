@@ -4,7 +4,6 @@ import { AppRouter } from "./routes/AppRouter";
 
 import { usePerformanceTelemetry } from "@/shared/lib/performance/usePerformanceTelemetry";
 import { LoadingScreen } from "@/shared/ui/LoadingScreen";
-import { PerformancePanel } from "@/shared/ui/PerformancePanel";
 
 export const App = () => (
   <>
@@ -12,7 +11,7 @@ export const App = () => (
     <Suspense fallback={<LoadingScreen />}>
       <AppRouter />
     </Suspense>
-    {import.meta.env.DEV ? <PerformancePanel /> : null}
+    {/* {import.meta.env.DEV ? <PerformancePanel /> : null} */}
   </>
 );
 
