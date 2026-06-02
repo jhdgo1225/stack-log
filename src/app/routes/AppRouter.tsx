@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
+import { CharacterSelectPage } from "@/pages/characterSelect";
 import { GamePage } from "@/pages/game";
 import { MainPage } from "@/pages/main";
 import { ProfilePage } from "@/pages/profile";
@@ -11,6 +12,10 @@ export function AppRouter() {
     <BrowserRouter>
       <Routes>
         <Route path={APP_ROUTES.MAIN} element={<MainPage />} />
+        <Route
+          path={APP_ROUTES.CHARACTER_SELECT}
+          element={<CharacterSelectPage />}
+        />
         <Route path={APP_ROUTES.GAME} element={<GamePage />} />
         <Route path={APP_ROUTES.RESULT} element={<ResultPage />} />
         <Route path={APP_ROUTES.PROFILE} element={<ProfilePage />} />
