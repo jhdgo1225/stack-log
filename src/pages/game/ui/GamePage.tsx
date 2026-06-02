@@ -2,8 +2,10 @@ import { useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useShallow } from "zustand/shallow";
 
-import { useScoreStore } from "@/entities/score";
+import { useCharacterStore } from "@/entities/character";
 import { useGameStore } from "@/entities/game";
+import { useGameRecordStore } from "@/entities/gameRecord";
+import { useScoreStore } from "@/entities/score";
 import { PauseButton } from "@/features/pause-game";
 import { RestartButton } from "@/features/restart-game";
 import { StartGameButton } from "@/features/start-game";
@@ -23,9 +25,12 @@ export const GamePage = () => {
   usePageTransitionTrace("game");
   const navigate = useNavigate();
   const setBestScore = useScoreStore((state) => state.setBestScore);
+  const selectedCharacterId = useCharacterStore((state) => state.selectedId);
+  const addRecord = useGameRecordStore((state) => state.addRecord);
   const score = useGameStore((state) => state.score);
 
   const hasSavedScore = useRef(false);
+  const runStartedAtRef = useRef<number | null>(null);
 
   const {
     board,
@@ -81,15 +86,38 @@ export const GamePage = () => {
   });
 
   useEffect(() => {
+    if (status === "playing" && runStartedAtRef.current === null) {
+      runStartedAtRef.current = Date.now();
+    }
+
     if (status === "over" && !hasSavedScore.current) {
+      const endedAt = Date.now();
+      const startedAt = runStartedAtRef.current ?? endedAt;
+
       setBestScore(score);
+      addRecord({
+        id: `${endedAt}-${Math.random().toString(36).slice(2, 9)}`,
+        characterId: selectedCharacterId,
+        score,
+        level,
+        playDurationMs: Math.max(0, endedAt - startedAt),
+        startedAt: new Date(startedAt).toISOString(),
+        endedAt: new Date(endedAt).toISOString(),
+        skillUses: {
+          Q: 0,
+          W: 0,
+          E: 0,
+          R: 0,
+        },
+      });
       hasSavedScore.current = true;
+      runStartedAtRef.current = null;
     }
 
     if (status === "playing") {
       hasSavedScore.current = false;
     }
-  }, [score, setBestScore, status]);
+  }, [addRecord, level, score, selectedCharacterId, setBestScore, status]);
 
   const overlayMessage = useMemo(() => {
     if (status === "paused") {
@@ -125,7 +153,8 @@ export const GamePage = () => {
                   <button
                     type="button"
                     className="text-link"
-                    onClick={handleViewResults}>
+                    onClick={handleViewResults}
+                  >
                     View results
                   </button>
                 </div>
