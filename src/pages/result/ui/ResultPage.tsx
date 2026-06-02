@@ -4,13 +4,22 @@ import { useGameStore } from "@/entities/game";
 import { useScoreStore } from "@/entities/score";
 import { RestartButton } from "@/features/restart-game";
 import { APP_ROUTES } from "@/shared/config/routes";
+import { startPageTransition } from "@/shared/lib/performance/performanceTelemetry";
+import { useMeasuredHandler } from "@/shared/lib/performance/useMeasuredHandler";
+import { usePerformanceTrace } from "@/shared/lib/performance/usePerformanceTrace";
 
 export const ResultPage = () => {
+  usePerformanceTrace("page.result");
   const navigate = useNavigate();
   const score = useGameStore((state) => state.score);
   const lines = useGameStore((state) => state.lines);
   const level = useGameStore((state) => state.level);
   const bestScore = useScoreStore((state) => state.bestScore);
+
+  const handleBackHome = useMeasuredHandler("ui.result.backHome", () => {
+    startPageTransition("result", "main");
+    void navigate(APP_ROUTES.MAIN);
+  });
 
   return (
     <div className="page page-result">
@@ -40,12 +49,15 @@ export const ResultPage = () => {
         <div className="result-actions">
           <RestartButton
             label="Play again"
-            onAfterRestart={() => navigate(APP_ROUTES.GAME)}
+            onAfterRestart={() => {
+              startPageTransition("result", "game");
+              void navigate(APP_ROUTES.GAME);
+            }}
           />
           <button
             type="button"
             className="text-link"
-            onClick={() => navigate(APP_ROUTES.MAIN)}>
+            onClick={handleBackHome}>
             Back to home
           </button>
         </div>
