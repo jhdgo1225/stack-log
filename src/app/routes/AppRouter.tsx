@@ -1,10 +1,13 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { APP_ROUTES } from "@/shared/config/routes";
+import { usePageTransitionTrace } from "@/shared/lib/performance/usePageTransitionTrace";
 import { MainPage } from "@/pages/main";
 import { GamePage } from "@/pages/game";
 import { ResultPage } from "@/pages/result";
 
 function ProfileFallbackPage() {
+  usePageTransitionTrace("profile");
+
   return (
     <main
       style={{

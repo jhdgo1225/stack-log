@@ -1,17 +1,24 @@
 import { useNavigate } from "react-router-dom";
+
 import { APP_ROUTES } from "@/shared/config/routes";
+import { startPageTransition } from "@/shared/lib/performance/performanceTelemetry";
+import { useMeasuredHandler } from "@/shared/lib/performance/useMeasuredHandler";
+import { usePerformanceTrace } from "@/shared/lib/performance/usePerformanceTrace";
 import * as styles from "./MainMenu.css";
 
 export function MainMenu() {
+  usePerformanceTrace("widget.mainMenu");
   const navigate = useNavigate();
 
-  const handleGameStart = () => {
-    navigate(APP_ROUTES.GAME);
-  };
+  const handleGameStart = useMeasuredHandler("ui.mainMenu.start", () => {
+    startPageTransition("main", "game");
+    void navigate(APP_ROUTES.GAME);
+  });
 
-  const handleProfile = () => {
-    navigate(APP_ROUTES.PROFILE);
-  };
+  const handleProfile = useMeasuredHandler("ui.mainMenu.profile", () => {
+    startPageTransition("main", "profile");
+    void navigate(APP_ROUTES.PROFILE);
+  });
 
   return (
     <nav className={styles.mainMenu} aria-label="메인 메뉴">

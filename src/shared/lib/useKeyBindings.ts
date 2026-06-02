@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 
+import { trackPerformanceSync } from "./performance/performanceTelemetry";
+
 export type KeyBindingMap = Record<string, (event: KeyboardEvent) => void>;
 
 export const useKeyBindings = (bindings: KeyBindingMap, isEnabled = true) => {
@@ -34,7 +36,7 @@ export const useKeyBindings = (bindings: KeyBindingMap, isEnabled = true) => {
       }
 
       event.preventDefault();
-      action(event);
+      trackPerformanceSync(`key:${event.code || event.key}`, () => action(event));
     };
 
     window.addEventListener("keydown", handleKeyDown);

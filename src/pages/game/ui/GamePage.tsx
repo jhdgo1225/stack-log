@@ -8,12 +8,19 @@ import { PauseButton } from "@/features/pause-game";
 import { RestartButton } from "@/features/restart-game";
 import { StartGameButton } from "@/features/start-game";
 import { APP_ROUTES } from "@/shared/config/routes";
+import { startPageTransition } from "@/shared/lib/performance/performanceTelemetry";
+import { useFpsMonitor } from "@/shared/lib/performance/useFpsMonitor";
+import { useMeasuredHandler } from "@/shared/lib/performance/useMeasuredHandler";
+import { usePageTransitionTrace } from "@/shared/lib/performance/usePageTransitionTrace";
+import { usePerformanceTrace } from "@/shared/lib/performance/usePerformanceTrace";
 import { useKeyBindings } from "@/shared/lib/useKeyBindings";
 import { useRafInterval } from "@/shared/lib/useRafInterval";
 import { GameCanvas } from "@/widgets/gameCanvas/ui/GameCanvas";
 import { GameHud } from "@/widgets/gameHud/ui/GameHud";
 
 export const GamePage = () => {
+  usePerformanceTrace("page.game");
+  usePageTransitionTrace("game");
   const navigate = useNavigate();
   const setBestScore = useScoreStore((state) => state.setBestScore);
   const score = useGameStore((state) => state.score);
@@ -50,6 +57,7 @@ export const GamePage = () => {
     })),
   );
 
+  useFpsMonitor(status === "playing", { label: "gameplay" });
   useRafInterval(() => tick(), speedMs, status === "playing");
 
   useKeyBindings(
@@ -62,6 +70,15 @@ export const GamePage = () => {
     },
     status !== "over",
   );
+
+  const handleMoveLeft = useMeasuredHandler("ui.game.mobileLeft", moveLeft);
+  const handleMoveRight = useMeasuredHandler("ui.game.mobileRight", moveRight);
+  const handleSoftDrop = useMeasuredHandler("ui.game.mobileSoftDrop", softDrop);
+  const handleHardDrop = useMeasuredHandler("ui.game.mobileHardDrop", hardDrop);
+  const handleViewResults = useMeasuredHandler("ui.game.viewResults", () => {
+    startPageTransition("game", "result");
+    void navigate(APP_ROUTES.RESULT);
+  });
 
   useEffect(() => {
     if (status === "over" && !hasSavedScore.current) {
@@ -103,12 +120,12 @@ export const GamePage = () => {
                 <div className="game-overlay-actions">
                   <RestartButton
                     label="Play again"
-                    onAfterRestart={() => navigate(APP_ROUTES.GAME)}
+                    onAfterRestart={() => void navigate(APP_ROUTES.GAME)}
                   />
                   <button
                     type="button"
                     className="text-link"
-                    onClick={() => navigate(APP_ROUTES.RESULT)}>
+                    onClick={handleViewResults}>
                     View results
                   </button>
                 </div>
@@ -129,16 +146,16 @@ export const GamePage = () => {
             <RestartButton label="Restart run" />
           </div>
           <div className="game-mobile-controls" aria-label="Touch controls">
-            <button type="button" onClick={moveLeft}>
+            <button type="button" onClick={handleMoveLeft}>
               Move left
             </button>
-            <button type="button" onClick={moveRight}>
+            <button type="button" onClick={handleMoveRight}>
               Move right
             </button>
-            <button type="button" onClick={softDrop}>
+            <button type="button" onClick={handleSoftDrop}>
               Soft drop
             </button>
-            <button type="button" onClick={hardDrop}>
+            <button type="button" onClick={handleHardDrop}>
               Hard drop
             </button>
           </div>

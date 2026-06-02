@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import { getRenderBoard } from "@/entities/game";
 import type { Board } from "@/entities/game";
 import type { ActiveBlock } from "@/entities/game/model/types";
+import { usePerformanceTrace } from "@/shared/lib/performance/usePerformanceTrace";
 
 type GameCanvasProps = {
   board: Board;
@@ -10,6 +11,13 @@ type GameCanvasProps = {
 };
 
 export const GameCanvas = ({ board, active }: GameCanvasProps) => {
+  usePerformanceTrace("widget.gameCanvas", {
+    meta: {
+      rows: board.length,
+      cols: board[0]?.length ?? 0,
+    },
+  });
+
   const renderBoard = getRenderBoard(board, active);
   const rows = renderBoard.length;
   const cols = renderBoard[0]?.length ?? 0;

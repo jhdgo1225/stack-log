@@ -1,5 +1,6 @@
 import { useRestartGame } from "../model/useRestartGame";
 
+import { useMeasuredHandler } from "@/shared/lib/performance/useMeasuredHandler";
 import { Button } from "@/shared/ui/Button";
 
 type RestartButtonProps = {
@@ -15,10 +16,10 @@ export const RestartButton = ({
 }: RestartButtonProps) => {
   const { restartGame } = useRestartGame();
 
-  const handleClick = () => {
+  const handleClick = useMeasuredHandler("ui.restartButton", () => {
     restartGame();
     onAfterRestart?.();
-  };
+  });
 
   return (
     <Button

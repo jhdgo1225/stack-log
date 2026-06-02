@@ -9,6 +9,7 @@ import {
   stepDown,
 } from "./gameLogic";
 import type { GameData, GameStatus } from "./types";
+import { trackPerformanceSync } from "@/shared/lib/performance/performanceTelemetry";
 
 type GameStore = GameData & {
   status: GameStatus;
@@ -28,103 +29,123 @@ export const useGameStore = create<GameStore>((set, get) => ({
   status: "idle",
   speedMs: START_SPEED_MS,
   startGame: () => {
-    const nextData = createInitialGameData();
-    const spawned = stepDown(nextData);
-    const next = spawned.next;
+    trackPerformanceSync("game.startGame", () => {
+      const nextData = createInitialGameData();
+      const spawned = stepDown(nextData);
+      const next = spawned.next;
 
-    set({
-      ...next,
-      status: "playing",
-      speedMs: getSpeedMs(next.level),
+      set({
+        ...next,
+        status: "playing",
+        speedMs: getSpeedMs(next.level),
+      });
     });
   },
   resetGame: () => {
-    const nextData = createInitialGameData();
-    set({
-      ...nextData,
-      status: "idle",
-      speedMs: START_SPEED_MS,
+    trackPerformanceSync("game.resetGame", () => {
+      const nextData = createInitialGameData();
+      set({
+        ...nextData,
+        status: "idle",
+        speedMs: START_SPEED_MS,
+      });
     });
   },
   togglePause: () => {
-    set((state) => {
-      if (state.status === "playing") {
-        return { ...state, status: "paused" };
-      }
+    trackPerformanceSync("game.togglePause", () => {
+      set((state) => {
+        if (state.status === "playing") {
+          return { ...state, status: "paused" };
+        }
 
-      if (state.status === "paused") {
-        return { ...state, status: "playing" };
-      }
+        if (state.status === "paused") {
+          return { ...state, status: "playing" };
+        }
 
-      return state;
+        return state;
+      });
     });
   },
   tick: () => {
-    const { status, board, active, score, lines, level } = get();
+    trackPerformanceSync(
+      "game.tick",
+      () => {
+      const { status, board, active, score, lines, level } = get();
 
-    if (status !== "playing") {
-      return;
-    }
+      if (status !== "playing") {
+        return;
+      }
 
-    const result = stepDown({ board, active, score, lines, level });
+      const result = stepDown({ board, active, score, lines, level });
 
-    set((state) => ({
-      ...state,
-      ...result.next,
-      speedMs: getSpeedMs(result.next.level),
-      status: result.gameOver ? "over" : state.status,
-    }));
+      set((state) => ({
+        ...state,
+        ...result.next,
+        speedMs: getSpeedMs(result.next.level),
+        status: result.gameOver ? "over" : state.status,
+      }));
+      },
+      { kind: "sample", thresholdMs: 0 },
+    );
   },
   moveLeft: () => {
-    const { status, board, active, score, lines, level } = get();
+    trackPerformanceSync("game.moveLeft", () => {
+      const { status, board, active, score, lines, level } = get();
 
-    if (status !== "playing") {
-      return;
-    }
+      if (status !== "playing") {
+        return;
+      }
 
-    const next = moveHorizontal({ board, active, score, lines, level }, -1);
-    set((state) => ({ ...state, ...next }));
+      const next = moveHorizontal({ board, active, score, lines, level }, -1);
+      set((state) => ({ ...state, ...next }));
+    });
   },
   moveRight: () => {
-    const { status, board, active, score, lines, level } = get();
+    trackPerformanceSync("game.moveRight", () => {
+      const { status, board, active, score, lines, level } = get();
 
-    if (status !== "playing") {
-      return;
-    }
+      if (status !== "playing") {
+        return;
+      }
 
-    const next = moveHorizontal({ board, active, score, lines, level }, 1);
-    set((state) => ({ ...state, ...next }));
+      const next = moveHorizontal({ board, active, score, lines, level }, 1);
+      set((state) => ({ ...state, ...next }));
+    });
   },
   softDrop: () => {
-    const { status, board, active, score, lines, level } = get();
+    trackPerformanceSync("game.softDrop", () => {
+      const { status, board, active, score, lines, level } = get();
 
-    if (status !== "playing") {
-      return;
-    }
+      if (status !== "playing") {
+        return;
+      }
 
-    const result = stepDown({ board, active, score, lines, level });
+      const result = stepDown({ board, active, score, lines, level });
 
-    set((state) => ({
-      ...state,
-      ...result.next,
-      speedMs: getSpeedMs(result.next.level),
-      status: result.gameOver ? "over" : state.status,
-    }));
+      set((state) => ({
+        ...state,
+        ...result.next,
+        speedMs: getSpeedMs(result.next.level),
+        status: result.gameOver ? "over" : state.status,
+      }));
+    });
   },
   hardDrop: () => {
-    const { status, board, active, score, lines, level } = get();
+    trackPerformanceSync("game.hardDrop", () => {
+      const { status, board, active, score, lines, level } = get();
 
-    if (status !== "playing") {
-      return;
-    }
+      if (status !== "playing") {
+        return;
+      }
 
-    const result = applyHardDrop({ board, active, score, lines, level });
+      const result = applyHardDrop({ board, active, score, lines, level });
 
-    set((state) => ({
-      ...state,
-      ...result.next,
-      speedMs: getSpeedMs(result.next.level),
-      status: result.gameOver ? "over" : state.status,
-    }));
+      set((state) => ({
+        ...state,
+        ...result.next,
+        speedMs: getSpeedMs(result.next.level),
+        status: result.gameOver ? "over" : state.status,
+      }));
+    });
   },
 }));
