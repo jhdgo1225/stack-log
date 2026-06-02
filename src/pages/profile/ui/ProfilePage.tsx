@@ -13,6 +13,8 @@ import { startPageTransition } from "@/shared/lib/performance/performanceTelemet
 import { useMeasuredHandler } from "@/shared/lib/performance/useMeasuredHandler";
 import { usePageTransitionTrace } from "@/shared/lib/performance/usePageTransitionTrace";
 import { usePerformanceTrace } from "@/shared/lib/performance/usePerformanceTrace";
+import { BackButton } from "@/shared/ui/BackButton";
+import { CharacterSelectModal } from "@/widgets/characterSelectModal";
 
 import * as styles from "./ProfilePage.css";
 
@@ -369,13 +371,20 @@ export function ProfilePage() {
     >
       <div className={styles.shell}>
         <header className={styles.topBar}>
-          <button
-            type="button"
+          <BackButton
             className={styles.backButton}
+            style={
+              {
+                "--back-button-border":
+                  "color-mix(in srgb, var(--profile-accent) 45%, #222)",
+                "--back-button-bg": "transparent",
+                "--back-button-hover-bg": "transparent",
+                "--back-button-shadow": "var(--profile-soft-shadow)",
+                "--back-button-outline": "var(--profile-accent)",
+              } as CSSProperties
+            }
             onClick={handleBack}
-          >
-            ← 뒤로 가기
-          </button>
+          />
 
           <div
             className={styles.favorite}
@@ -580,75 +589,46 @@ export function ProfilePage() {
         </nav>
       </div>
 
-      {isModalOpen ? (
-        <div
-          className={styles.modalBackdrop}
-          role="presentation"
-          onMouseDown={() => setIsModalOpen(false)}
-        >
-          <section
-            className={styles.modal}
-            role="dialog"
-            aria-modal="true"
-            aria-label="캐릭터 선택 모달"
-            onMouseDown={(event) => event.stopPropagation()}
-          >
+      <CharacterSelectModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="에밀리"
+        hasResults={modalOptions.length > 0}
+        style={
+          {
+            "--character-select-modal-bg": "#fff",
+            "--character-select-modal-input-bg": "#f1f1f1",
+            "--character-select-modal-outline": "var(--profile-accent)",
+            "--character-select-modal-width": "900px",
+          } as CSSProperties
+        }
+      >
+        <div className={styles.modalGrid}>
+          {modalOptions.map((option) => (
             <button
               type="button"
-              className={styles.modalClose}
-              onClick={() => setIsModalOpen(false)}
-              aria-label="캐릭터 선택 모달 닫기"
-            >
-              ×
-            </button>
-            <div className={styles.searchRow}>
-              <input
-                className={styles.searchInput}
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="에밀리"
-                aria-label="캐릭터 검색"
-              />
-              <button type="button" className={styles.smallButton}>
-                검색
-              </button>
-            </div>
-            <div className={styles.modalGridWrap}>
-              {modalOptions.length > 0 ? (
-                <div className={styles.modalGrid}>
-                  {modalOptions.map((option) => (
-                    <button
-                      type="button"
-                      key={option.id}
-                      className={classNames(
-                        styles.characterCard,
-                        option.id === selectedFilter &&
-                          styles.characterCardSelected,
-                      )}
-                      style={
-                        {
-                          "--character-accent": option.color,
-                          "--character-fill": option.background ?? option.color,
-                        } as CSSProperties
-                      }
-                      onClick={() => selectFilter(option)}
-                      aria-pressed={option.id === selectedFilter}
-                    >
-                      <span
-                        className={styles.characterFaceSmall}
-                        aria-hidden="true"
-                      />
-                      <span>{option.name}</span>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div className={styles.emptyState}>검색 결과가 없습니다.</div>
+              key={option.id}
+              className={classNames(
+                styles.characterCard,
+                option.id === selectedFilter && styles.characterCardSelected,
               )}
-            </div>
-          </section>
+              style={
+                {
+                  "--character-accent": option.color,
+                  "--character-fill": option.background ?? option.color,
+                } as CSSProperties
+              }
+              onClick={() => selectFilter(option)}
+              aria-pressed={option.id === selectedFilter}
+            >
+              <span className={styles.characterFaceSmall} aria-hidden="true" />
+              <span>{option.name}</span>
+            </button>
+          ))}
         </div>
-      ) : null}
+      </CharacterSelectModal>
     </main>
   );
 }

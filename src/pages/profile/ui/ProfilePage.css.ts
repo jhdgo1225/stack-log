@@ -42,33 +42,6 @@ export const topBar = style({
 
 export const backButton = style({
   justifySelf: "start",
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 6,
-  minHeight: 40,
-  padding: "6px 14px",
-  border: "1.5px solid color-mix(in srgb, var(--profile-accent) 45%, #222)",
-  borderRadius: 8,
-  background: "transparent",
-  color: "#111",
-  fontSize: 20,
-  fontWeight: 700,
-  cursor: "pointer",
-  transition:
-    "transform 140ms ease, background 140ms ease, box-shadow 140ms ease",
-  selectors: {
-    "&:hover": {
-      transform: "translateY(-2px)",
-      boxShadow: "var(--profile-soft-shadow)",
-    },
-    "&:active": {
-      transform: "translateY(0)",
-    },
-    "&:focus-visible": {
-      outline: "3px solid var(--profile-accent)",
-      outlineOffset: 3,
-    },
-  },
 });
 
 export const favorite = style({
