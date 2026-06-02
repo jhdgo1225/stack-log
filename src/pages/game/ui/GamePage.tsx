@@ -103,12 +103,12 @@ export const GamePage = () => {
                 <div className="game-overlay-actions">
                   <RestartButton
                     label="Play again"
-                    onAfterRestart={() => navigate(APP_ROUTES.game)}
+                    onAfterRestart={() => navigate(APP_ROUTES.GAME)}
                   />
                   <button
                     type="button"
                     className="text-link"
-                    onClick={() => navigate(APP_ROUTES.result)}>
+                    onClick={() => navigate(APP_ROUTES.RESULT)}>
                     View results
                   </button>
                 </div>

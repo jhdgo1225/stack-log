@@ -24,7 +24,7 @@ export const StartGameButton = ({
   const handleClick = () => {
     startGame();
     onAfterStart?.();
-    navigate(APP_ROUTES.game);
+    navigate(APP_ROUTES.GAME);
   };
 
   return (

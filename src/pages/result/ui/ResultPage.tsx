@@ -40,12 +40,12 @@ export const ResultPage = () => {
         <div className="result-actions">
           <RestartButton
             label="Play again"
-            onAfterRestart={() => navigate(APP_ROUTES.game)}
+            onAfterRestart={() => navigate(APP_ROUTES.GAME)}
           />
           <button
             type="button"
             className="text-link"
-            onClick={() => navigate(APP_ROUTES.main)}>
+            onClick={() => navigate(APP_ROUTES.MAIN)}>
             Back to home
           </button>
         </div>

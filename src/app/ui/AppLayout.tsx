@@ -9,7 +9,7 @@ export const AppLayout = () => (
       Skip to content
     </a>
     <header className="app-header">
-      <Link className="brand" to={APP_ROUTES.main}>
+      <Link className="brand" to={APP_ROUTES.MAIN}>
         <span className="brand-badge" aria-hidden="true">
           DM
         </span>
@@ -19,9 +19,9 @@ export const AppLayout = () => (
         </span>
       </Link>
       <nav className="app-nav" aria-label="Primary">
-        <Link to={APP_ROUTES.main}>Home</Link>
-        <Link to={APP_ROUTES.game}>Play</Link>
-        <Link to={APP_ROUTES.result}>Results</Link>
+        <Link to={APP_ROUTES.MAIN}>Home</Link>
+        <Link to={APP_ROUTES.GAME}>Play</Link>
+        <Link to={APP_ROUTES.RESULT}>Results</Link>
       </nav>
       <SettingsPanel />
     </header>
