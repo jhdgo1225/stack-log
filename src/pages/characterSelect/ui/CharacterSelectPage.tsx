@@ -2,7 +2,12 @@ import type { CSSProperties } from "react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { CHARACTER_LIST, useCharacterStore } from "@/entities/character";
+import {
+  CHARACTER_LIST,
+  getCharacterFaceSrc,
+  getCharacterSkillSrc,
+  useCharacterStore,
+} from "@/entities/character";
 import type { Character, CharacterSkill } from "@/entities/character";
 import { useStartGame } from "@/features/start-game";
 import { APP_ROUTES } from "@/shared/config/routes";
@@ -15,9 +20,21 @@ import { BackButton } from "@/shared/ui/BackButton";
 import { CharacterSelectModal } from "@/widgets/characterSelectModal";
 import * as styles from "./CharacterSelectPage.css";
 
+const CAROUSEL_PREV_ICON = "/assets/icons/chevron_backward.svg";
+const CAROUSEL_NEXT_ICON = "/assets/icons/chevron_forward.svg";
+
 const visibleCharacters = CHARACTER_LIST.slice(0, 6);
 const defaultThemeGradient =
   "linear-gradient(90deg, #4BB9FF 0%, #8A5DFF 50%, #FF4DDC 100%)";
+
+const CHARACTER_PREVIEW_STYLE: Record<
+  string,
+  { scale: number; translateY: number }
+> = {
+  may: { scale: 0.98, translateY: 4 },
+  bron: { scale: 1.08, translateY: 10 },
+  aria: { scale: 0.92, translateY: 2 },
+};
 
 export function CharacterSelectPage() {
   usePerformanceTrace("page.characterSelect");
@@ -103,6 +120,15 @@ export function CharacterSelectPage() {
     >
       <BackButton
         className={styles.backButton}
+        icon={
+          <img
+            className={styles.backButtonIcon}
+            src="/assets/icons/arrow_back.svg"
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+          />
+        }
         style={{
           "--back-button-bg": "var(--character-soft)",
           "--back-button-hover-bg": "#f6f6f6",
@@ -120,13 +146,21 @@ export function CharacterSelectPage() {
               className={styles.arrowButton}
               aria-label="이전 캐릭터 선택 항목"
             >
-              ‹
+              <img
+                className={styles.arrowButtonIcon}
+                src={CAROUSEL_PREV_ICON}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+              />
             </button>
             <div className={styles.carouselCards}>
               {visibleCharacters.map((character) => (
                 <CharacterCard
                   key={character.id}
                   character={character}
+                  useFace
+                  showName={false}
                   isSelected={
                     selectedCharacter !== null &&
                     character.id === selectedCharacter.id
@@ -140,7 +174,13 @@ export function CharacterSelectPage() {
               className={styles.arrowButton}
               aria-label="다음 캐릭터 선택 항목"
             >
-              ›
+              <img
+                className={styles.arrowButtonIcon}
+                src={CAROUSEL_NEXT_ICON}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+              />
             </button>
           </div>
 
@@ -163,6 +203,7 @@ export function CharacterSelectPage() {
               src={selectedCharacter.imageSrc}
               alt={`${selectedCharacter.name} 캐릭터`}
               draggable={false}
+              style={getCharacterPreviewStyle(selectedCharacter.id)}
             />
           ) : selectedCharacter ? (
             <div className={styles.largePlaceholder}>
@@ -201,7 +242,16 @@ export function CharacterSelectPage() {
                       aria-pressed={skill.id === selectedSkill?.id}
                       onClick={() => setSelectedSkillId(skill.id)}
                     >
-                      <span>{String(index + 1).padStart(2, "0")}</span>
+                      <img
+                        className={styles.skillSlotImage}
+                        src={getCharacterSkillSrc(selectedCharacter.id, skill.type)}
+                        alt=""
+                        aria-hidden="true"
+                        draggable={false}
+                      />
+                      <span className={styles.skillSlotIndex}>
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
                     </button>
                   ))
                 : Array.from({ length: 5 }).map((_, index) => (
@@ -260,6 +310,8 @@ export function CharacterSelectPage() {
             <CharacterCard
               key={character.id}
               character={character}
+              useFace
+              showName
               isSelected={
                 selectedCharacter !== null &&
                 character.id === selectedCharacter.id
@@ -271,6 +323,18 @@ export function CharacterSelectPage() {
       </CharacterSelectModal>
     </main>
   );
+}
+
+function getCharacterPreviewStyle(characterId: string): CSSProperties {
+  const preset = CHARACTER_PREVIEW_STYLE[characterId] ?? {
+    scale: 1,
+    translateY: 0,
+  };
+
+  return {
+    "--preview-scale": String(preset.scale),
+    "--preview-translate-y": `${preset.translateY}px`,
+  } as CSSProperties;
 }
 
 function EmptySkillInfo() {
@@ -288,32 +352,63 @@ function characterTheme(character: Character) {
 
 type CharacterCardProps = {
   character: Character;
+  useFace?: boolean;
+  showName?: boolean;
   isSelected: boolean;
   onClick: () => void;
 };
 
-function CharacterCard({ character, isSelected, onClick }: CharacterCardProps) {
+function CharacterCard({
+  character,
+  useFace = false,
+  showName = false,
+  isSelected,
+  onClick,
+}: CharacterCardProps) {
+  const isModalCard = showName;
+
   return (
     <button
       type="button"
       className={classNames(
         styles.characterCard,
-        isSelected && styles.selectedCharacterCard,
+        isModalCard ? styles.characterModalCard : styles.characterCarouselCard,
+        isSelected &&
+          (isModalCard
+            ? styles.characterModalCardSelected
+            : styles.selectedCharacterCard),
       )}
+      style={
+        isModalCard
+          ? ({
+              "--character-accent": character.color,
+              "--character-fill": character.color,
+            } as CSSProperties)
+          : undefined
+      }
       onClick={onClick}
       aria-label={`${character.name} 선택`}
       aria-pressed={isSelected}
     >
       {character.imageSrc ? (
         <img
-          className={styles.cardImage}
-          src={character.imageSrc}
+          className={
+            useFace
+              ? isModalCard
+                ? styles.characterModalFaceImage
+                : styles.characterCarouselFaceImage
+              : styles.cardImage
+          }
+          src={useFace ? getCharacterFaceSrc(character.id) : character.imageSrc}
           alt=""
           draggable={false}
         />
       ) : (
         <span className={styles.cardPlaceholderText}>{character.name}</span>
       )}
+      {showName ? (
+        <span className={styles.characterCardLabel}>{character.name}</span>
+      ) : null}
     </button>
   );
 }
@@ -323,13 +418,29 @@ function SkillInfo({ skill }: { skill: CharacterSkill }) {
     <article className={styles.skillInfo}>
       <div className={styles.skillInfoTop}>
         <div className={styles.skillType}>
+          <img
+            className={styles.skillTypeImage}
+            src={getCharacterSkillSrc(
+              selectedCharacterIdForSkill(skill),
+              skill.type,
+            )}
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+          />
           <span>{skill.type}</span>
           <strong>{skill.name}</strong>
         </div>
         <div className={styles.videoControl}>
           <span>설명 영상</span>
           <button type="button" aria-label={`${skill.name} 설명 영상`}>
-            <span aria-hidden="true" />
+            <img
+              className={styles.videoControlIcon}
+              src="/assets/icons/cam.svg"
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+            />
           </button>
         </div>
       </div>
@@ -360,4 +471,12 @@ function SkillInfo({ skill }: { skill: CharacterSkill }) {
       ) : null}
     </article>
   );
+}
+
+function selectedCharacterIdForSkill(skill: CharacterSkill) {
+  const character = CHARACTER_LIST.find((item) =>
+    item.skills.some((itemSkill) => itemSkill.id === skill.id),
+  );
+
+  return character?.id ?? "may";
 }
