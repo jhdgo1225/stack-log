@@ -1,4 +1,27 @@
-export { BOARD_HEIGHT, BOARD_WIDTH, START_SPEED_MS } from "./model/constants";
-export { getRenderBoard } from "./model/gameLogic";
+export {
+  BOARD_HEIGHT,
+  BOARD_WIDTH,
+  HIDDEN_ROWS,
+  LEVEL_CLEAR_DELAY_MS,
+  OBSTACLE_WARNING_MS,
+  START_SPEED_MS,
+  VISIBLE_ROWS,
+} from "./model/constants";
+export {
+  canPlaceCells,
+  getAbsoluteCells,
+  getMiniBoard,
+  getRenderBoard,
+} from "./model/gameLogic";
 export { useGameStore } from "./model/gameStore";
-export type { Board, GameStatus } from "./model/types";
+export type {
+  ActiveBlock,
+  BagSlot,
+  BlockDefinition,
+  Board,
+  GameStatus,
+  Point,
+  SkillCooldowns,
+  SkillKey,
+  SkillUses,
+} from "./model/types";
