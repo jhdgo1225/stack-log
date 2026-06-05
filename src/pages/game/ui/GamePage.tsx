@@ -1,14 +1,19 @@
-import { useEffect, useMemo, useRef } from "react";
+import type { CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useShallow } from "zustand/shallow";
 
-import { useCharacterStore } from "@/entities/character";
+import {
+  CHARACTER_LIST,
+  getCharacterBlockSrc,
+  getCharacterGamePlayThemeSrc,
+  getCharacterSkillSrc,
+  useCharacterStore,
+} from "@/entities/character";
+import type { BagSlot, BlockDefinition, SkillKey } from "@/entities/game";
 import { useGameStore } from "@/entities/game";
 import { useGameRecordStore } from "@/entities/gameRecord";
 import { useScoreStore } from "@/entities/score";
-import { PauseButton } from "@/features/pause-game";
-import { RestartButton } from "@/features/restart-game";
-import { StartGameButton } from "@/features/start-game";
 import { APP_ROUTES } from "@/shared/config/routes";
 import { startPageTransition } from "@/shared/lib/performance/performanceTelemetry";
 import { useFpsMonitor } from "@/shared/lib/performance/useFpsMonitor";
@@ -17,8 +22,209 @@ import { usePageTransitionTrace } from "@/shared/lib/performance/usePageTransiti
 import { usePerformanceTrace } from "@/shared/lib/performance/usePerformanceTrace";
 import { useKeyBindings } from "@/shared/lib/useKeyBindings";
 import { useRafInterval } from "@/shared/lib/useRafInterval";
+import { Button } from "@/shared/ui/Button";
 import { GameCanvas } from "@/widgets/gameCanvas/ui/GameCanvas";
-import { GameHud } from "@/widgets/gameHud/ui/GameHud";
+
+const pauseIconSrc = "/assets/icons/pause.svg";
+const resumeIconSrc = "/assets/icons/play-filled.svg";
+const settingsIconSrc = "/assets/icons/settings.svg";
+const exitIconSrc = "/assets/icons/exit.svg";
+
+const skillKeys: SkillKey[] = ["Q", "W", "E", "R"];
+const skillLabels = ["패시브", "Q", "W", "E", "R"];
+
+const formatNumber = (value: number) => value.toLocaleString("ko-KR");
+
+const getMiniShape = (definition: BlockDefinition | null) => {
+  if (!definition) {
+    return {
+      cells: [],
+      cols: 1,
+      rows: 1,
+    };
+  }
+
+  const minX = Math.min(...definition.cells.map((cell) => cell.x));
+  const minY = Math.min(...definition.cells.map((cell) => cell.y));
+  const cells = definition.cells.map((cell) => ({
+    x: cell.x - minX,
+    y: cell.y - minY,
+  }));
+
+  return {
+    cells,
+    cols: Math.max(...cells.map((cell) => cell.x)) + 1,
+    rows: Math.max(...cells.map((cell) => cell.y)) + 1,
+  };
+};
+
+const MiniBlock = ({
+  definition,
+  label,
+  isMuted = false,
+  style,
+}: {
+  definition: BlockDefinition | null;
+  label?: string;
+  isMuted?: boolean;
+  style?: CSSProperties;
+}) => {
+  const shape = getMiniShape(definition);
+
+  return (
+    <div
+      className="mini-block"
+      data-muted={isMuted}
+      style={style}>
+      {label ? <span className="mini-block-label">{label}</span> : null}
+      <div
+        className="mini-block-grid"
+        style={
+          {
+            "--mini-rows": shape.rows,
+            "--mini-cols": shape.cols,
+          } as CSSProperties
+        }>
+        {shape.cells.map((cell, index) => (
+          <span
+            key={`${cell.x}-${cell.y}-${index}`}
+            style={
+              {
+                "--mini-cell-x": cell.x + 1,
+                "--mini-cell-y": cell.y + 1,
+              } as CSSProperties
+            }
+            aria-hidden="true"
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const SkillSlotIcon = ({
+  src,
+  alt,
+  label,
+  cooldownSeconds,
+}: {
+  src: string;
+  alt: string;
+  label: string;
+  cooldownSeconds?: number;
+}) => {
+  return (
+    <div className="skill-icon-shell">
+      <img className="skill-icon-image" src={src} alt={alt} draggable={false} />
+      {cooldownSeconds !== undefined ? (
+        <span className="skill-icon-timer" aria-hidden="true">
+          {cooldownSeconds}
+        </span>
+      ) : null}
+      <span className="skill-key">{label}</span>
+    </div>
+  );
+};
+
+const BagPreview = ({ bag }: { bag: BagSlot[] }) => {
+  const availableSlots = bag.filter((slot) => !slot.used);
+
+  return (
+    <section className="bag-preview" aria-label="8 block bag">
+      {availableSlots.map((slot) => (
+        <MiniBlock
+          key={slot.id}
+          definition={slot.definition}
+          label={slot.definition.label}
+        />
+      ))}
+    </section>
+  );
+};
+
+const HelpModal = ({ onClose }: { onClose: () => void }) => {
+  const selectedCharacterId = useCharacterStore((state) => state.selectedId);
+  const character =
+    CHARACTER_LIST.find((item) => item.id === selectedCharacterId) ??
+    CHARACTER_LIST[0];
+
+  if (!character) {
+    return null;
+  }
+
+  return (
+    <div className="help-backdrop" role="dialog" aria-modal="true">
+      <div className="help-panel">
+        <header className="help-header">
+          <div>
+            <span className="stat-label">F1 Help</span>
+            <h2>조작과 스킬</h2>
+          </div>
+          <button type="button" className="icon-button" onClick={onClose}>
+            X
+          </button>
+        </header>
+        <div className="help-grid">
+          <section>
+            <h3>Controls</h3>
+            <p>←/→ 이동, A/D 회전, S 소프트 드롭, Space 하드 드롭</p>
+            <p>Shift 홀드, Q/W/E/R 스킬, ESC 일시정지</p>
+          </section>
+          <section>
+            <h3>{character.name} Skills</h3>
+            {character.skills.map((skill, index) => (
+              <p key={skill.id} className="help-skill-item">
+                <img
+                  className="help-skill-icon"
+                  src={getCharacterSkillSrc(character.id, skill.type)}
+                  alt=""
+                  aria-hidden="true"
+                  draggable={false}
+                />
+                <span>
+                  {skillLabels[index] ?? skill.type} · {skill.name}:{" "}
+                  {skill.description}
+                </span>
+              </p>
+            ))}
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const FailurePile = ({
+  blocks,
+}: {
+  blocks: Array<{ x: number; y: number }>;
+}) => {
+  let visibleBlocks = blocks;
+
+  if (!visibleBlocks.length) {
+    visibleBlocks = Array.from({ length: 80 }, (_, index) => ({
+      x: index % 12,
+      y: Math.floor(index / 12),
+    }));
+  }
+
+  return (
+    <div className="failure-pile" aria-hidden="true">
+      {visibleBlocks.slice(0, 120).map((block, index) => (
+        <span
+          key={`${block.x}-${block.y}-${index}`}
+          style={
+            {
+              "--pile-x": `${(block.x / 12) * 82 + 6}%`,
+              "--pile-y": `${92 - (index % 9) * 3}%`,
+              "--pile-rotate": `${((index % 7) - 3) * 9}deg`,
+            } as CSSProperties
+          }
+        />
+      ))}
+    </div>
+  );
+};
 
 export const GamePage = () => {
   usePerformanceTrace("page.game");
@@ -27,70 +233,190 @@ export const GamePage = () => {
   const setBestScore = useScoreStore((state) => state.setBestScore);
   const selectedCharacterId = useCharacterStore((state) => state.selectedId);
   const addRecord = useGameRecordStore((state) => state.addRecord);
-  const score = useGameStore((state) => state.score);
+  const selectedCharacter =
+    CHARACTER_LIST.find((character) => character.id === selectedCharacterId) ??
+    CHARACTER_LIST[0];
+  const characterThemeStyle = {
+    "--character-color": selectedCharacter?.color ?? "#ff99cc",
+    "--character-bg": selectedCharacter?.backgroundColor ?? "#c46496",
+    "--character-theme-image": selectedCharacter
+      ? `url(${getCharacterGamePlayThemeSrc(selectedCharacter.id)})`
+      : "none",
+    "--character-block-image": selectedCharacter
+      ? `url(${getCharacterBlockSrc(selectedCharacter.id)})`
+      : "none",
+  } as CSSProperties;
 
   const hasSavedScore = useRef(false);
   const runStartedAtRef = useRef<number | null>(null);
+  const comboToastTimerRef = useRef<number | null>(null);
+  const [, setCooldownPulseMs] = useState(0);
+  const [visibleCombo, setVisibleCombo] = useState<number | null>(null);
 
   const {
     board,
     active,
+    bag,
+    heldBlock,
     status,
     level,
-    lines,
+    score,
+    targetScore,
+    combo,
     speedMs,
+    skillCooldowns,
+    skillUses,
+    obstaclePreviewBlocks,
+    helpOpen,
+    failureBlocks,
     tick,
+    tickSkillCooldowns,
+    startLevel,
+    continueAfterClear,
+    resetRun,
     moveLeft,
     moveRight,
+    rotateClockwise,
+    rotateCounterClockwise,
     softDrop,
     hardDrop,
+    holdBlock,
+    useSkill: activateSkill,
     togglePause,
+    toggleHelp,
   } = useGameStore(
     useShallow((state) => ({
       board: state.board,
       active: state.active,
+      bag: state.bag,
+      heldBlock: state.heldBlock,
       status: state.status,
       level: state.level,
-      lines: state.lines,
+      score: state.score,
+      targetScore: state.targetScore,
+      combo: state.combo,
       speedMs: state.speedMs,
+      skillCooldowns: state.skillCooldowns,
+      skillUses: state.skillUses,
+      obstaclePreviewBlocks: state.obstaclePreviewBlocks,
+      helpOpen: state.helpOpen,
+      failureBlocks: state.failureBlocks,
       tick: state.tick,
+      tickSkillCooldowns: state.tickSkillCooldowns,
+      startLevel: state.startLevel,
+      continueAfterClear: state.continueAfterClear,
+      resetRun: state.resetRun,
       moveLeft: state.moveLeft,
       moveRight: state.moveRight,
+      rotateClockwise: state.rotateClockwise,
+      rotateCounterClockwise: state.rotateCounterClockwise,
       softDrop: state.softDrop,
       hardDrop: state.hardDrop,
+      holdBlock: state.holdBlock,
+      useSkill: state.useSkill,
       togglePause: state.togglePause,
+      toggleHelp: state.toggleHelp,
     })),
   );
 
   useFpsMonitor(status === "playing", { label: "gameplay" });
   useRafInterval(() => tick(), speedMs, status === "playing");
 
+  useEffect(() => {
+    if (status !== "playing") {
+      return undefined;
+    }
+
+    const timeoutId = window.setInterval(() => {
+      setCooldownPulseMs((current) => current + 1000);
+      tickSkillCooldowns();
+    }, 1000);
+
+    return () => window.clearInterval(timeoutId);
+  }, [status, tickSkillCooldowns]);
+
+  useEffect(() => {
+    if (status !== "levelClear") {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => continueAfterClear(), 5000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [continueAfterClear, status]);
+
+  useEffect(() => {
+    if (combo < 2) {
+      return undefined;
+    }
+
+    setVisibleCombo(combo);
+
+    if (comboToastTimerRef.current !== null) {
+      window.clearTimeout(comboToastTimerRef.current);
+    }
+
+    comboToastTimerRef.current = window.setTimeout(() => {
+      setVisibleCombo(null);
+      comboToastTimerRef.current = null;
+    }, 1200);
+
+    return undefined;
+  }, [combo]);
+
+  useEffect(
+    () => () => {
+      if (comboToastTimerRef.current !== null) {
+        window.clearTimeout(comboToastTimerRef.current);
+      }
+    },
+    [],
+  );
+
   useKeyBindings(
     {
       ArrowLeft: () => moveLeft(),
       ArrowRight: () => moveRight(),
       ArrowDown: () => softDrop(),
+      KeyS: () => softDrop(),
       Space: () => hardDrop(),
-      KeyP: () => togglePause(),
+      KeyA: () => rotateCounterClockwise(),
+      KeyD: () => rotateClockwise(),
+      ShiftLeft: () => holdBlock(),
+      ShiftRight: () => holdBlock(),
+      KeyQ: () => activateSkill("Q"),
+      KeyW: () => activateSkill("W"),
+      KeyE: () => activateSkill("E"),
+      KeyR: () => activateSkill("R"),
+      Escape: () => togglePause(),
+      F1: () => toggleHelp(),
+      Enter: () => {
+        if (status === "levelIntro") {
+          startLevel();
+        }
+      },
     },
-    status !== "over",
+    true,
   );
 
-  const handleMoveLeft = useMeasuredHandler("ui.game.mobileLeft", moveLeft);
-  const handleMoveRight = useMeasuredHandler("ui.game.mobileRight", moveRight);
-  const handleSoftDrop = useMeasuredHandler("ui.game.mobileSoftDrop", softDrop);
-  const handleHardDrop = useMeasuredHandler("ui.game.mobileHardDrop", hardDrop);
   const handleViewResults = useMeasuredHandler("ui.game.viewResults", () => {
     startPageTransition("game", "result");
     void navigate(APP_ROUTES.RESULT);
   });
+
+  const handleActivateSkill = useMeasuredHandler(
+    "ui.game.activateSkill",
+    (key: SkillKey) => {
+      activateSkill(key);
+    },
+  );
 
   useEffect(() => {
     if (status === "playing" && runStartedAtRef.current === null) {
       runStartedAtRef.current = Date.now();
     }
 
-    if (status === "over" && !hasSavedScore.current) {
+    if (status === "failed" && !hasSavedScore.current) {
       const endedAt = Date.now();
       const startedAt = runStartedAtRef.current ?? endedAt;
 
@@ -103,12 +429,7 @@ export const GamePage = () => {
         playDurationMs: Math.max(0, endedAt - startedAt),
         startedAt: new Date(startedAt).toISOString(),
         endedAt: new Date(endedAt).toISOString(),
-        skillUses: {
-          Q: 0,
-          W: 0,
-          E: 0,
-          R: 0,
-        },
+        skillUses,
       });
       hasSavedScore.current = true;
       runStartedAtRef.current = null;
@@ -117,79 +438,238 @@ export const GamePage = () => {
     if (status === "playing") {
       hasSavedScore.current = false;
     }
-  }, [addRecord, level, score, selectedCharacterId, setBestScore, status]);
+  }, [
+    addRecord,
+    level,
+    score,
+    selectedCharacterId,
+    setBestScore,
+    skillUses,
+    status,
+  ]);
 
-  const overlayMessage = useMemo(() => {
+  const skillCooldownViews = skillKeys.map((key) => {
+    const remainingMs = skillCooldowns[key];
+
+    if (remainingMs <= 0) {
+      return null;
+    }
+
+    return {
+      key,
+      remainingSeconds: Math.max(1, Math.ceil(remainingMs / 1000)),
+    };
+  });
+
+  const skillSlotItems = selectedCharacter.skills.map((skill, index) => {
+    const isPassive = index === 0;
+    const activeKey = skillKeys[index - 1];
+    const cooldownView = !isPassive
+      ? skillCooldownViews.find((item) => item?.key === activeKey)
+      : null;
+
+    const sharedContent = (
+      <SkillSlotIcon
+        src={getCharacterSkillSrc(selectedCharacter.id, skill.type)}
+        alt=""
+        label={skillLabels[index] ?? skill.type}
+        cooldownSeconds={cooldownView?.remainingSeconds}
+      />
+    );
+
+    if (isPassive) {
+      return (
+        <div
+          key={skill.id}
+          className="skill-slot skill-slot--passive"
+          data-ready="true">
+          {sharedContent}
+        </div>
+      );
+    }
+
+    return (
+      <button
+        key={skill.id}
+        type="button"
+        className="skill-slot"
+        data-ready={skillCooldowns[activeKey] <= 0}
+        onClick={() => handleActivateSkill(activeKey)}>
+        {sharedContent}
+      </button>
+    );
+  });
+
+  const overlay = useMemo(() => {
+    if (status === "levelIntro") {
+      return (
+        <div className="game-overlay game-overlay--intro" role="status">
+          <span className="level-kicker">NEXT STAGE</span>
+          <strong>LEVEL {level}</strong>
+          <span>
+            목표 {targetScore === null ? "SURVIVE" : formatNumber(targetScore)}
+          </span>
+          <Button type="button" variant="primary" onClick={startLevel}>
+            Start level
+          </Button>
+        </div>
+      );
+    }
+
     if (status === "paused") {
-      return "Paused";
+      return (
+        <div className="game-overlay" role="status">
+          <strong>PAUSED</strong>
+          <Button type="button" variant="primary" onClick={togglePause}>
+            Resume
+          </Button>
+        </div>
+      );
     }
 
-    if (status === "over") {
-      return "Game over";
+    if (status === "levelClear") {
+      return (
+        <div className="game-overlay game-overlay--clear" role="status">
+          <strong>LEVEL {level}</strong>
+          <span>통과</span>
+        </div>
+      );
     }
 
-    if (status === "idle") {
-      return "Ready";
+    if (status === "failed") {
+      return (
+        <div className="game-overlay game-overlay--failed" role="status">
+          <strong>LEVEL {level}</strong>
+          <span>실패</span>
+          <div className="game-overlay-actions">
+            <Button type="button" variant="primary" onClick={resetRun}>
+              Retry from level 1
+            </Button>
+            <button
+              type="button"
+              className="text-link"
+              onClick={handleViewResults}>
+              View results
+            </button>
+          </div>
+        </div>
+      );
     }
 
-    return "";
-  }, [status]);
+    return null;
+  }, [
+    handleViewResults,
+    level,
+    resetRun,
+    startLevel,
+    status,
+    targetScore,
+    togglePause,
+  ]);
 
   return (
-    <div className="page page-game">
-      <div className="game-layout">
-        <div className="game-stage">
-          <GameCanvas board={board} active={active} />
-          {overlayMessage ? (
-            <div className="game-overlay" role="status">
-              <p>{overlayMessage}</p>
-              {status === "idle" ? <StartGameButton label="Start" /> : null}
-              {status === "over" ? (
-                <div className="game-overlay-actions">
-                  <RestartButton
-                    label="Play again"
-                    onAfterRestart={() => void navigate(APP_ROUTES.GAME)}
-                  />
-                  <button
-                    type="button"
-                    className="text-link"
-                    onClick={handleViewResults}
-                  >
-                    View results
-                  </button>
-                </div>
+    <div
+      className="page page-game"
+      style={characterThemeStyle}>
+      <div className="game-playfield">
+        <div className="game-topbar">
+          <div className="topbar-actions" aria-label="Game actions">
+            <button
+              type="button"
+              className="icon-button icon-button--pause"
+              aria-label={status === "paused" ? "재개" : "중지"}
+              onClick={togglePause}>
+              <img
+                src={status === "paused" ? resumeIconSrc : pauseIconSrc}
+                alt=""
+                aria-hidden="true"
+                className="icon-button__icon"
+                draggable={false}
+              />
+            </button>
+            <button
+              type="button"
+              className="icon-button icon-button--settings"
+              aria-label="설정"
+              onClick={toggleHelp}>
+              <img
+                src={settingsIconSrc}
+                alt=""
+                aria-hidden="true"
+                className="icon-button__icon"
+                draggable={false}
+              />
+            </button>
+            <button
+              type="button"
+              className="icon-button icon-button--exit"
+              aria-label="나가기"
+              onClick={() => void navigate(APP_ROUTES.MAIN)}>
+              <img
+                src={exitIconSrc}
+                alt=""
+                aria-hidden="true"
+                className="icon-button__icon"
+                draggable={false}
+              />
+            </button>
+          </div>
+        </div>
+
+        <main className="game-core">
+          <aside className="game-left-rail" aria-label="Character and skills">
+            <div className="character-orbit">
+              {selectedCharacter?.imageSrc ? (
+                <img
+                  src={selectedCharacter.imageSrc}
+                  alt={selectedCharacter.name}
+                  className="game-character"
+                />
               ) : null}
             </div>
-          ) : null}
-        </div>
-        <aside className="game-sidebar">
-          <GameHud
-            score={score}
-            level={level}
-            lines={lines}
-            status={status}
-            speedMs={speedMs}
-          />
-          <div className="game-controls">
-            <PauseButton />
-            <RestartButton label="Restart run" />
-          </div>
-          <div className="game-mobile-controls" aria-label="Touch controls">
-            <button type="button" onClick={handleMoveLeft}>
-              Move left
-            </button>
-            <button type="button" onClick={handleMoveRight}>
-              Move right
-            </button>
-            <button type="button" onClick={handleSoftDrop}>
-              Soft drop
-            </button>
-            <button type="button" onClick={handleHardDrop}>
-              Hard drop
-            </button>
-          </div>
-        </aside>
+
+            <div className="skill-slots" aria-label="Skills">
+              {skillSlotItems}
+            </div>
+          </aside>
+
+          <section className="board-stack" aria-label="Play area">
+            <div className="game-status-strip" aria-label="Game status">
+              <span>LEVEL {level}</span>
+              <strong>{formatNumber(score)}</strong>
+              <span>
+                목표 {targetScore === null ? "SURVIVE" : formatNumber(targetScore)}
+              </span>
+            </div>
+            {status === "failed" ? (
+              <FailurePile blocks={failureBlocks} />
+            ) : (
+              <GameCanvas
+                board={board}
+                active={active}
+                obstaclePreviewBlocks={
+                  status === "playing" ? obstaclePreviewBlocks : []
+                }
+              />
+            )}
+            {visibleCombo !== null ? (
+              <div className="combo-toast" role="status">
+                {visibleCombo} COMBO
+              </div>
+            ) : null}
+            {overlay}
+          </section>
+
+          <aside className="game-right-rail" aria-label="Next blocks and hold">
+            <div className="hold-panel">
+              <MiniBlock definition={heldBlock} label="HOLD" />
+              <span>보관함</span>
+            </div>
+            <BagPreview bag={bag} />
+          </aside>
+        </main>
       </div>
+      {helpOpen ? <HelpModal onClose={toggleHelp} /> : null}
     </div>
   );
 };

@@ -1,59 +1,136 @@
 import { create } from "zustand";
 
-import { START_SPEED_MS } from "./constants";
+import { trackPerformanceSync } from "@/shared/lib/performance/performanceTelemetry";
+
+import {
+  LEVEL_CLEAR_DELAY_MS,
+  LEVEL_TARGET_SCORES,
+  START_SPEED_MS,
+} from "./constants";
 import {
   createInitialGameData,
   getSpeedMs,
   hardDrop as applyHardDrop,
+  holdBlock as applyHoldBlock,
   moveHorizontal,
+  reduceSkillCooldowns,
+  rotateActiveBlock,
+  spawnNextBlock,
   stepDown,
+  tickObstacles,
+  useSkill as applySkill,
 } from "./gameLogic";
-import type { GameData, GameStatus } from "./types";
-import { trackPerformanceSync } from "@/shared/lib/performance/performanceTelemetry";
+import type { GameData, GameStatus, SkillKey } from "./types";
 
 type GameStore = GameData & {
   status: GameStatus;
   speedMs: number;
+  clearDelayMs: number;
   startGame: () => void;
+  startLevel: () => void;
+  continueAfterClear: () => void;
   resetGame: () => void;
+  resetRun: () => void;
   togglePause: () => void;
+  toggleHelp: () => void;
   tick: () => void;
+  tickSkillCooldowns: () => void;
   moveLeft: () => void;
   moveRight: () => void;
+  rotateClockwise: () => void;
+  rotateCounterClockwise: () => void;
   softDrop: () => void;
   hardDrop: () => void;
+  holdBlock: () => void;
+  useSkill: (key: SkillKey) => void;
 };
 
-export const useGameStore = create<GameStore>((set, get) => ({
+const toStatusState = (status: GameStatus) => ({
+  status,
+  clearDelayMs: status === "levelClear" ? LEVEL_CLEAR_DELAY_MS : 0,
+});
+
+const createRunStartState = () => ({
   ...createInitialGameData(),
-  status: "idle",
+  ...toStatusState("levelIntro"),
   speedMs: START_SPEED_MS,
+});
+
+export const useGameStore = create<GameStore>((set, get) => ({
+  ...createRunStartState(),
   startGame: () => {
     trackPerformanceSync("game.startGame", () => {
-      const nextData = createInitialGameData();
-      const spawned = stepDown(nextData);
-      const next = spawned.next;
+      set(createRunStartState());
+    });
+  },
+  startLevel: () => {
+    trackPerformanceSync("game.startLevel", () => {
+      const state = get();
+      let base: GameData = state;
+
+      if (state.active) {
+        base = createInitialGameData(
+          state.level,
+          state.score,
+          state.lines,
+          state.skillUses,
+        );
+      }
+
+      if (state.status === "failed") {
+        base = createInitialGameData();
+      }
+
+      const spawned = spawnNextBlock(base);
 
       set({
-        ...next,
-        status: "playing",
-        speedMs: getSpeedMs(next.level),
+        ...spawned.next,
+        ...toStatusState(spawned.failed ? "failed" : "playing"),
+        speedMs: getSpeedMs(spawned.next.level),
+      });
+    });
+  },
+  continueAfterClear: () => {
+    trackPerformanceSync("game.continueAfterClear", () => {
+      const state = get();
+
+      if (state.status !== "levelClear") {
+        return;
+      }
+
+      const nextLevel = Math.min(20, state.level + 1);
+      const nextData = createInitialGameData(
+        nextLevel,
+        state.score,
+        state.lines,
+        state.skillUses,
+      );
+
+      set({
+        ...nextData,
+        targetScore: LEVEL_TARGET_SCORES[nextLevel] ?? null,
+        ...toStatusState("levelIntro"),
+        speedMs: getSpeedMs(nextLevel),
       });
     });
   },
   resetGame: () => {
     trackPerformanceSync("game.resetGame", () => {
-      const nextData = createInitialGameData();
-      set({
-        ...nextData,
-        status: "idle",
-        speedMs: START_SPEED_MS,
-      });
+      set(createRunStartState());
+    });
+  },
+  resetRun: () => {
+    trackPerformanceSync("game.resetRun", () => {
+      set(createRunStartState());
     });
   },
   togglePause: () => {
     trackPerformanceSync("game.togglePause", () => {
       set((state) => {
+        if (state.helpOpen) {
+          return { ...state, helpOpen: false };
+        }
+
         if (state.status === "playing") {
           return { ...state, status: "paused" };
         }
@@ -66,86 +143,178 @@ export const useGameStore = create<GameStore>((set, get) => ({
       });
     });
   },
+  toggleHelp: () => {
+    trackPerformanceSync("game.toggleHelp", () => {
+      set((state) => ({
+        ...state,
+        helpOpen: !state.helpOpen,
+        status:
+          !state.helpOpen && state.status === "playing"
+            ? "paused"
+            : state.status,
+      }));
+    });
+  },
   tick: () => {
     trackPerformanceSync(
       "game.tick",
       () => {
-      const { status, board, active, score, lines, level } = get();
+        const state = get();
 
-      if (status !== "playing") {
-        return;
-      }
+        if (state.status !== "playing") {
+          return;
+        }
 
-      const result = stepDown({ board, active, score, lines, level });
+        const obstacleResult = tickObstacles(state, state.speedMs);
 
-      set((state) => ({
-        ...state,
-        ...result.next,
-        speedMs: getSpeedMs(result.next.level),
-        status: result.gameOver ? "over" : state.status,
-      }));
+        if (obstacleResult.status !== "playing") {
+          set({
+            ...obstacleResult.next,
+            ...toStatusState(obstacleResult.status),
+            speedMs: getSpeedMs(obstacleResult.next.level),
+          });
+          return;
+        }
+
+        const result = stepDown(obstacleResult.next);
+
+        set({
+          ...result.next,
+          ...toStatusState(result.status),
+          speedMs: getSpeedMs(result.next.level),
+        });
       },
       { kind: "sample", thresholdMs: 0 },
     );
   },
-  moveLeft: () => {
-    trackPerformanceSync("game.moveLeft", () => {
-      const { status, board, active, score, lines, level } = get();
+  tickSkillCooldowns: () => {
+    trackPerformanceSync("game.tickSkillCooldowns", () => {
+      const state = get();
 
-      if (status !== "playing") {
+      if (state.status !== "playing") {
         return;
       }
 
-      const next = moveHorizontal({ board, active, score, lines, level }, -1);
-      set((state) => ({ ...state, ...next }));
+      set({
+        ...state,
+        skillCooldowns: reduceSkillCooldowns(state.skillCooldowns, 1000),
+      });
+    });
+  },
+  moveLeft: () => {
+    trackPerformanceSync("game.moveLeft", () => {
+      const state = get();
+
+      if (state.status !== "playing") {
+        return;
+      }
+
+      set({ ...state, ...moveHorizontal(state, -1) });
     });
   },
   moveRight: () => {
     trackPerformanceSync("game.moveRight", () => {
-      const { status, board, active, score, lines, level } = get();
+      const state = get();
 
-      if (status !== "playing") {
+      if (state.status !== "playing") {
         return;
       }
 
-      const next = moveHorizontal({ board, active, score, lines, level }, 1);
-      set((state) => ({ ...state, ...next }));
+      set({ ...state, ...moveHorizontal(state, 1) });
+    });
+  },
+  rotateClockwise: () => {
+    trackPerformanceSync("game.rotateClockwise", () => {
+      const state = get();
+
+      if (state.status !== "playing") {
+        return;
+      }
+
+      set({ ...state, ...rotateActiveBlock(state, 1) });
+    });
+  },
+  rotateCounterClockwise: () => {
+    trackPerformanceSync("game.rotateCounterClockwise", () => {
+      const state = get();
+
+      if (state.status !== "playing") {
+        return;
+      }
+
+      set({ ...state, ...rotateActiveBlock(state, -1) });
     });
   },
   softDrop: () => {
     trackPerformanceSync("game.softDrop", () => {
-      const { status, board, active, score, lines, level } = get();
+      const state = get();
 
-      if (status !== "playing") {
+      if (state.status !== "playing") {
         return;
       }
 
-      const result = stepDown({ board, active, score, lines, level });
+      const result = stepDown(state);
 
-      set((state) => ({
-        ...state,
+      set({
         ...result.next,
+        ...toStatusState(result.status),
         speedMs: getSpeedMs(result.next.level),
-        status: result.gameOver ? "over" : state.status,
-      }));
+      });
     });
   },
   hardDrop: () => {
     trackPerformanceSync("game.hardDrop", () => {
-      const { status, board, active, score, lines, level } = get();
+      const state = get();
 
-      if (status !== "playing") {
+      if (state.status !== "playing") {
         return;
       }
 
-      const result = applyHardDrop({ board, active, score, lines, level });
+      const result = applyHardDrop(state);
 
-      set((state) => ({
-        ...state,
+      set({
         ...result.next,
+        ...toStatusState(result.status),
         speedMs: getSpeedMs(result.next.level),
-        status: result.gameOver ? "over" : state.status,
-      }));
+      });
+    });
+  },
+  holdBlock: () => {
+    trackPerformanceSync("game.holdBlock", () => {
+      const state = get();
+
+      if (state.status !== "playing") {
+        return;
+      }
+
+      const result = applyHoldBlock(state);
+
+      set({
+        ...result.next,
+        ...toStatusState(result.status),
+        speedMs: getSpeedMs(result.next.level),
+      });
+    });
+  },
+  useSkill: (key) => {
+    trackPerformanceSync(`game.useSkill.${key}`, () => {
+      const state = get();
+
+      if (state.status !== "playing") {
+        return;
+      }
+
+      const skilled = applySkill(state, key);
+      const status =
+        skilled.targetScore !== null && skilled.score >= skilled.targetScore
+          ? "levelClear"
+          : "playing";
+
+      set({
+        ...skilled,
+        ...toStatusState(status),
+        speedMs: getSpeedMs(skilled.level),
+      });
     });
   },
 }));

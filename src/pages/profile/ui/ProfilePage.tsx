@@ -1,7 +1,12 @@
 import { type CSSProperties, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { CHARACTER_LIST } from "@/entities/character";
+import {
+  CHARACTER_LIST,
+  getCharacterFaceSrc,
+  getCharacterSkillSrc,
+  getCharacterSymbolSrc,
+} from "@/entities/character";
 import {
   type GameRecord,
   type SkillKey,
@@ -17,6 +22,11 @@ import { BackButton } from "@/shared/ui/BackButton";
 import { CharacterSelectModal } from "@/widgets/characterSelectModal";
 
 import * as styles from "./ProfilePage.css";
+
+const PAGE_FIRST_ICON = "/assets/icons/double-chevron-backward.svg";
+const PAGE_PREV_ICON = "/assets/icons/chevron_backward.svg";
+const PAGE_NEXT_ICON = "/assets/icons/chevron_forward.svg";
+const PAGE_LAST_ICON = "/assets/icons/double-chevron-forward.svg";
 
 type CharacterFilter = string;
 
@@ -312,6 +322,10 @@ export function ProfilePage() {
     (best, record) => Math.max(best, record.skillUses.R),
     0,
   );
+  const skillDisplayCharacter =
+    selectedFilter === "all"
+      ? mostPlayedCharacter
+      : getCharacter(selectedFilter);
   const totalSkillUses = SKILL_KEYS.reduce(
     (totals, key) => ({
       ...totals,
@@ -367,8 +381,7 @@ export function ProfilePage() {
     <main
       className={styles.profilePage}
       style={profileStyle}
-      aria-label="프로필 화면"
-    >
+      aria-label="프로필 화면">
       <div className={styles.shell}>
         <header className={styles.topBar}>
           <BackButton
@@ -388,16 +401,17 @@ export function ProfilePage() {
 
           <div
             className={styles.favorite}
-            aria-label="가장 많이 플레이한 캐릭터"
-          >
+            aria-label="가장 많이 플레이한 캐릭터">
             <span className={styles.favoriteBadge}>
               가장 많이 플레이한 캐릭터
             </span>
             <strong className={styles.favoriteName}>
-              <span
-                className={styles.characterDot}
-                style={{ background: mostPlayedCharacter.color }}
+              <img
+                className={styles.favoriteSymbol}
+                src={getCharacterSymbolSrc(mostPlayedCharacter.id)}
+                alt=""
                 aria-hidden="true"
+                draggable={false}
               />
               {mostPlayedCharacter.name}
             </strong>
@@ -443,8 +457,7 @@ export function ProfilePage() {
 
                 setDraftNickname(nickname);
                 setIsEditingNickname(true);
-              }}
-            >
+              }}>
               {isEditingNickname ? "저장" : "변경"}
             </button>
           </article>
@@ -456,11 +469,17 @@ export function ProfilePage() {
               <button
                 type="button"
                 className={styles.selectedCharacterButton}
-                onClick={() => setIsModalOpen(true)}
-              >
-                <span
-                  className={styles.compactCharacterDot}
+                onClick={() => setIsModalOpen(true)}>
+                <img
+                  className={styles.compactCharacterSymbol}
+                  src={getCharacterSymbolSrc(
+                    selectedOption.id === "all"
+                      ? mostPlayedCharacter.id
+                      : selectedOption.id,
+                  )}
+                  alt=""
                   aria-hidden="true"
+                  draggable={false}
                 />
                 {selectedOption.name}
               </button>
@@ -506,20 +525,34 @@ export function ProfilePage() {
                   </p>
                 </span>
                 <div className={styles.skillSlots}>
-                  {SKILL_KEYS.map((skillKey) => (
-                    <button
-                      type="button"
-                      key={skillKey}
-                      className={styles.skillButton}
-                      aria-label={`${skillKey} 스킬 사용 횟수 ${totalSkillUses[skillKey]}회`}
-                    >
-                      <span className={styles.skillIcon} aria-hidden="true" />
-                      <span>{skillKey}</span>
-                      <span className={styles.tooltip}>
-                        {skillKey}: {totalSkillUses[skillKey]}회
-                      </span>
-                    </button>
-                  ))}
+                  {SKILL_KEYS.map((skillKey, index) => {
+                    const skill =
+                      skillDisplayCharacter.skills[index + 1] ??
+                      skillDisplayCharacter.skills[0];
+
+                    return (
+                      <button
+                        type="button"
+                        key={skillKey}
+                        className={styles.skillButton}
+                        aria-label={`${skillKey} 스킬 사용 횟수 ${totalSkillUses[skillKey]}회`}>
+                        <img
+                          className={styles.skillIconImage}
+                          src={getCharacterSkillSrc(
+                            skillDisplayCharacter.id,
+                            skill.type,
+                          )}
+                          alt=""
+                          aria-hidden="true"
+                          draggable={false}
+                        />
+                        <span>{skillKey}</span>
+                        <span className={styles.tooltip}>
+                          {skillKey}: {totalSkillUses[skillKey]}회
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -539,18 +572,28 @@ export function ProfilePage() {
             className={styles.pageButton}
             disabled={currentPage === 1}
             onClick={() => setPage(1)}
-            aria-label="첫 페이지"
-          >
-            «
+            aria-label="첫 페이지">
+            <img
+              className={styles.pageButtonIconFirstLast}
+              src={PAGE_FIRST_ICON}
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+            />
           </button>
           <button
             type="button"
             className={styles.pageButton}
             disabled={currentPage === 1}
             onClick={() => setPage(Math.max(1, currentPage - PAGE_WINDOW_SIZE))}
-            aria-label="이전 수십 페이지"
-          >
-            ‹
+            aria-label="이전 수십 페이지">
+            <img
+              className={styles.pageButtonIconPrevNext}
+              src={PAGE_PREV_ICON}
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+            />
           </button>
           {pageNumbers.map((pageNumber) => (
             <button
@@ -561,8 +604,7 @@ export function ProfilePage() {
                 pageNumber === currentPage && styles.pageButtonActive,
               )}
               onClick={() => setPage(pageNumber)}
-              aria-current={pageNumber === currentPage ? "page" : undefined}
-            >
+              aria-current={pageNumber === currentPage ? "page" : undefined}>
               {pageNumber}
             </button>
           ))}
@@ -573,18 +615,28 @@ export function ProfilePage() {
             onClick={() =>
               setPage(Math.min(totalPages, currentPage + PAGE_WINDOW_SIZE))
             }
-            aria-label="다음 수십 페이지"
-          >
-            ›
+            aria-label="다음 수십 페이지">
+            <img
+              className={styles.pageButtonIconPrevNext}
+              src={PAGE_NEXT_ICON}
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+            />
           </button>
           <button
             type="button"
             className={styles.pageButton}
             disabled={currentPage === totalPages}
             onClick={() => setPage(totalPages)}
-            aria-label="마지막 페이지"
-          >
-            »
+            aria-label="마지막 페이지">
+            <img
+              className={styles.pageButtonIconFirstLast}
+              src={PAGE_LAST_ICON}
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+            />
           </button>
         </nav>
       </div>
@@ -603,8 +655,7 @@ export function ProfilePage() {
             "--character-select-modal-outline": "var(--profile-accent)",
             "--character-select-modal-width": "900px",
           } as CSSProperties
-        }
-      >
+        }>
         <div className={styles.modalGrid}>
           {modalOptions.map((option) => (
             <button
@@ -621,9 +672,20 @@ export function ProfilePage() {
                 } as CSSProperties
               }
               onClick={() => selectFilter(option)}
-              aria-pressed={option.id === selectedFilter}
-            >
-              <span className={styles.characterFaceSmall} aria-hidden="true" />
+              aria-pressed={option.id === selectedFilter}>
+              {option.id === "all" ? (
+                <span className={styles.characterFaceAll} aria-hidden="true">
+                  ALL
+                </span>
+              ) : (
+                <img
+                  className={styles.characterFaceImage}
+                  src={getCharacterFaceSrc(option.id)}
+                  alt=""
+                  aria-hidden="true"
+                  draggable={false}
+                />
+              )}
               <span>{option.name}</span>
             </button>
           ))}
@@ -640,9 +702,14 @@ function RecordCard({ record }: { record: GameRecord }) {
     <article
       className={styles.recordCard}
       style={{ "--record-accent": character.color } as CSSProperties}
-      aria-label={`${character.name} 게임 기록`}
-    >
-      <div className={styles.recordFace} aria-hidden="true" />
+      aria-label={`${character.name} 게임 기록`}>
+      <img
+        className={styles.recordFaceImage}
+        src={getCharacterFaceSrc(character.id)}
+        alt=""
+        aria-hidden="true"
+        draggable={false}
+      />
       <div className={styles.recordMain}>
         <div className={styles.recordScoreLine}>
           <span>Level {record.level}</span>
@@ -650,12 +717,22 @@ function RecordCard({ record }: { record: GameRecord }) {
           <span>{record.score}점</span>
         </div>
         <div className={styles.recordSkills}>
-          {SKILL_KEYS.map((skillKey) => (
-            <span key={skillKey} className={styles.recordSkill}>
-              <span className={styles.recordSkillIcon} aria-hidden="true" />
-              {skillKey}: {record.skillUses[skillKey]}회
-            </span>
-          ))}
+          {SKILL_KEYS.map((skillKey, index) => {
+            const skill = character.skills[index + 1] ?? character.skills[0];
+
+            return (
+              <span key={skillKey} className={styles.recordSkill}>
+                <img
+                  className={styles.recordSkillIconImage}
+                  src={getCharacterSkillSrc(character.id, skill.type)}
+                  alt=""
+                  aria-hidden="true"
+                  draggable={false}
+                />
+                {skillKey}: {record.skillUses[skillKey]}회
+              </span>
+            );
+          })}
         </div>
       </div>
       <div className={styles.recordMeta}>

@@ -1,3 +1,4 @@
+import { getCharacterImageSrc } from "./assets";
 import type { Character } from "./types";
 
 const mayCooldowns = [
@@ -22,7 +23,7 @@ export const CHARACTER_LIST: Character[] = [
     trait: "안정적인 플레이",
     color: "#FF99CC",
     backgroundColor: "#C46496",
-    imageSrc: "/assets/characters/may.png",
+    imageSrc: getCharacterImageSrc("may"),
     personality: "용해(溶解)",
     conceptBullets: [
       "분홍 계열 테마의 캐릭터",
@@ -117,6 +118,7 @@ export const CHARACTER_LIST: Character[] = [
     trait: "빠른 판단 보상",
     color: "#FF3300",
     backgroundColor: "#FF6633",
+    imageSrc: getCharacterImageSrc("bron"),
     personality: "폭발(爆發)",
     conceptBullets: [
       "빨강 계열 테마의 캐릭터",
@@ -209,6 +211,7 @@ export const CHARACTER_LIST: Character[] = [
     trait: "후반 안정성",
     color: "#FFDF3E",
     backgroundColor: "#948000",
+    imageSrc: getCharacterImageSrc("aria"),
     personality: "희망(希望)",
     conceptBullets: [
       "개나리의 희망을 품은 봄 테마 캐릭터",

@@ -69,22 +69,22 @@ export const favoriteName = style({
   fontWeight: 800,
 });
 
-export const characterDot = style({
+export const favoriteSymbol = style({
   width: 26,
   height: 26,
-  borderRadius: "50%",
-  background:
-    "radial-gradient(circle at 35% 28%, rgba(255,255,255,0.8), transparent 34%), var(--profile-accent-fill)",
-  boxShadow: "var(--profile-soft-shadow)",
+  objectFit: "contain",
+  objectPosition: "center",
+  pointerEvents: "none",
+  userSelect: "none",
 });
 
-export const compactCharacterDot = style({
+export const compactCharacterSymbol = style({
   width: 18,
   height: 18,
-  borderRadius: "50%",
-  background:
-    "radial-gradient(circle at 35% 28%, rgba(255,255,255,0.8), transparent 34%), var(--profile-accent-fill)",
-  boxShadow: "var(--profile-soft-shadow)",
+  objectFit: "contain",
+  objectPosition: "center",
+  pointerEvents: "none",
+  userSelect: "none",
 });
 
 export const summaryGrid = style({
@@ -253,6 +253,17 @@ export const selectedCharacterButton = style({
   },
 });
 
+export const skillIconImage = style({
+  width: 34,
+  height: 34,
+  borderRadius: 6,
+  objectFit: "cover",
+  objectPosition: "center",
+  background: "#F0F0F0",
+  pointerEvents: "none",
+  userSelect: "none",
+});
+
 export const statsList = style({
   display: "grid",
   gap: 10,
@@ -383,9 +394,13 @@ export const recordGrid = style({
   "@media": {
     "(max-width: 960px)": {
       gridTemplateColumns: "1fr",
-      maxHeight: "min(560px, 62vh)",
-      overflowY: "auto",
-      paddingRight: 4,
+      gap: 10,
+      maxHeight: "none",
+      overflowY: "visible",
+      paddingRight: 0,
+    },
+    "(max-width: 560px)": {
+      gap: 8,
     },
   },
 });
@@ -413,16 +428,18 @@ export const recordCard = style({
     "(max-width: 560px)": {
       gridTemplateColumns: "72px minmax(0, 1fr)",
       alignItems: "start",
+      minHeight: "unset",
+      padding: "5px 10px 6px 8px",
     },
   },
 });
 
-export const recordFace = style({
+export const recordFaceImage = style({
   width: 54,
   aspectRatio: "1",
   borderRadius: "50%",
-  background:
-    "linear-gradient(145deg, #d9d9d9, #eeeeee), radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--record-accent) 18%, transparent), transparent 64%)",
+  objectFit: "cover",
+  objectPosition: "center",
   boxShadow:
     "0 6px 10px rgba(0,0,0,0.08), 0 0 0 5px color-mix(in srgb, var(--record-accent) 8%, transparent)",
   "@media": {
@@ -436,6 +453,11 @@ export const recordMain = style({
   minWidth: 0,
   display: "grid",
   gap: 5,
+  "@media": {
+    "(max-width: 560px)": {
+      gap: 4,
+    },
+  },
 });
 
 export const recordScoreLine = style({
@@ -446,6 +468,12 @@ export const recordScoreLine = style({
   fontSize: 17,
   fontWeight: 900,
   whiteSpace: "nowrap",
+  "@media": {
+    "(max-width: 560px)": {
+      fontSize: 15,
+      gap: 7,
+    },
+  },
 });
 
 export const recordDivider = style({
@@ -458,6 +486,11 @@ export const recordSkills = style({
   display: "flex",
   gap: 7,
   flexWrap: "wrap",
+  "@media": {
+    "(max-width: 560px)": {
+      gap: 5,
+    },
+  },
 });
 
 export const recordSkill = style({
@@ -467,14 +500,30 @@ export const recordSkill = style({
   color: "#111",
   fontSize: 10,
   fontWeight: 800,
+  "@media": {
+    "(max-width: 560px)": {
+      gap: 2,
+      fontSize: 9,
+    },
+  },
 });
 
-export const recordSkillIcon = style({
+export const recordSkillIconImage = style({
   width: 24,
   height: 24,
   borderRadius: 4,
+  objectFit: "cover",
+  objectPosition: "center",
   background:
     "linear-gradient(145deg, #d9d9d9, #efefef), linear-gradient(180deg, color-mix(in srgb, var(--record-accent) 8%, transparent), transparent)",
+  pointerEvents: "none",
+  userSelect: "none",
+  "@media": {
+    "(max-width: 560px)": {
+      width: 20,
+      height: 20,
+    },
+  },
 });
 
 export const recordMeta = style({
@@ -487,6 +536,8 @@ export const recordMeta = style({
     "(max-width: 560px)": {
       gridColumn: "1 / -1",
       gridTemplateColumns: "1fr 1fr",
+      gap: 4,
+      fontSize: 10,
     },
   },
 });
@@ -517,8 +568,8 @@ export const pagination = style({
 });
 
 export const pageButton = style({
-  minWidth: 28,
-  height: 28,
+  width: 30,
+  height: 30,
   display: "grid",
   placeItems: "center",
   padding: 0,
@@ -526,7 +577,7 @@ export const pageButton = style({
   borderRadius: "50%",
   background: "transparent",
   color: "#111",
-  fontSize: 16,
+  fontSize: 15,
   fontWeight: 900,
   cursor: "pointer",
   selectors: {
@@ -542,6 +593,33 @@ export const pageButton = style({
       outlineOffset: 2,
     },
   },
+});
+
+export const pageButtonIcon = style({
+  width: 16,
+  height: 16,
+  display: "block",
+  objectFit: "contain",
+  pointerEvents: "none",
+  userSelect: "none",
+});
+
+export const pageButtonIconPrevNext = style({
+  width: 20,
+  height: 20,
+  display: "block",
+  objectFit: "contain",
+  pointerEvents: "none",
+  userSelect: "none",
+});
+
+export const pageButtonIconFirstLast = style({
+  width: 10,
+  height: 10,
+  display: "block",
+  objectFit: "contain",
+  pointerEvents: "none",
+  userSelect: "none",
 });
 
 export const pageButtonActive = style({
@@ -688,14 +766,30 @@ export const characterCardSelected = style({
     "0 10px 20px color-mix(in srgb, var(--character-accent) 20%, transparent)",
 });
 
-export const characterFaceSmall = style({
+export const characterFaceImage = style({
   width: "54%",
   aspectRatio: "1",
+  objectFit: "cover",
+  objectPosition: "center",
+  boxShadow:
+    "0 8px 14px rgba(0,0,0,0.08), 0 0 0 7px color-mix(in srgb, var(--character-accent) 8%, transparent)",
+  pointerEvents: "none",
+  userSelect: "none",
+});
+
+export const characterFaceAll = style({
+  width: "54%",
+  aspectRatio: "1",
+  display: "grid",
+  placeItems: "center",
   borderRadius: "50%",
   background:
     "radial-gradient(circle at 35% 28%, rgba(255,255,255,0.78), transparent 34%), var(--character-fill)",
   boxShadow:
     "0 8px 14px rgba(0,0,0,0.08), 0 0 0 7px color-mix(in srgb, var(--character-accent) 8%, transparent)",
+  color: "#fff",
+  fontSize: 14,
+  fontWeight: 900,
 });
 
 export const emptyState = style({
