@@ -7,6 +7,7 @@ import { APP_ROUTES } from "@/shared/config/routes";
 import { startPageTransition } from "@/shared/lib/performance/performanceTelemetry";
 import { useMeasuredHandler } from "@/shared/lib/performance/useMeasuredHandler";
 import { usePerformanceTrace } from "@/shared/lib/performance/usePerformanceTrace";
+import "./result.css.ts";
 
 export const ResultPage = () => {
   usePerformanceTrace("page.result");
@@ -54,10 +55,7 @@ export const ResultPage = () => {
               void navigate(APP_ROUTES.GAME);
             }}
           />
-          <button
-            type="button"
-            className="text-link"
-            onClick={handleBackHome}>
+          <button type="button" className="text-link" onClick={handleBackHome}>
             Back to home
           </button>
         </div>
