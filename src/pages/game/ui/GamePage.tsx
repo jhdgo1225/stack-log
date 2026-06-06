@@ -11,7 +11,7 @@ import {
   useCharacterStore,
 } from "@/entities/character";
 import type { BagSlot, BlockDefinition, SkillKey } from "@/entities/game";
-import { useGameStore } from "@/entities/game";
+import { BOARD_WIDTH, HIDDEN_ROWS, useGameStore } from "@/entities/game";
 import { useGameRecordStore } from "@/entities/gameRecord";
 import { useScoreStore } from "@/entities/score";
 import { APP_ROUTES } from "@/shared/config/routes";
@@ -20,6 +20,7 @@ import { useFpsMonitor } from "@/shared/lib/performance/useFpsMonitor";
 import { useMeasuredHandler } from "@/shared/lib/performance/useMeasuredHandler";
 import { usePageTransitionTrace } from "@/shared/lib/performance/usePageTransitionTrace";
 import { usePerformanceTrace } from "@/shared/lib/performance/usePerformanceTrace";
+import { useKeyBindings } from "@/shared/lib/useKeyBindings";
 import { Button } from "@/shared/ui/Button";
 import { GameCanvas } from "@/widgets/gameCanvas/ui/GameCanvas";
 import "./game.css.ts";
@@ -31,6 +32,9 @@ const exitIconSrc = "/assets/icons/exit.svg";
 
 const skillKeys: SkillKey[] = ["Q", "W", "E", "R"];
 const skillLabels = ["패시브", "Q", "W", "E", "R"];
+const failureOverlayDelayMs = 1100;
+const failureFallbackBlockCount = 80;
+const failurePileColumns = BOARD_WIDTH;
 
 const formatNumber = (value: number) => value.toLocaleString("ko-KR");
 
@@ -191,6 +195,77 @@ const HelpModal = ({ onClose }: { onClose: () => void }) => {
   );
 };
 
+const getDeterministicJitter = (index: number, salt: number) => {
+  const value = Math.sin((index + 1) * 12.9898 + salt * 78.233) * 43758.5453;
+
+  return value - Math.floor(value);
+};
+
+const getFailureRenderBlocks = (blocks: Array<{ x: number; y: number }>) => {
+  if (blocks.length > 0) {
+    return blocks.slice(0, 120);
+  }
+
+  return Array.from({ length: failureFallbackBlockCount }, (_, index) => ({
+    x: index % BOARD_WIDTH,
+    y: HIDDEN_ROWS + Math.floor(index / BOARD_WIDTH),
+  }));
+};
+
+const getFailurePileSlot = (index: number) => {
+  const row = Math.floor(index / failurePileColumns);
+  const col = (index * 7 + row * 5) % failurePileColumns;
+  const rowDrift = row % 2 === 0 ? 0 : 0.16;
+
+  return {
+    x: col + 0.5 + rowDrift,
+    y: 20.35 - row * 1.04,
+  };
+};
+
+const FailurePhysicsPile = ({
+  blocks,
+}: {
+  blocks: Array<{ x: number; y: number }>;
+}) => {
+  const visibleBlocks = useMemo(() => getFailureRenderBlocks(blocks), [blocks]);
+
+  return (
+    <div className="failure-pile" aria-hidden="true">
+      {visibleBlocks.map((block, index) => {
+        const visibleY = block.y - HIDDEN_ROWS;
+        const slot = getFailurePileSlot(index);
+        const burstX = (getDeterministicJitter(index, 1) - 0.5) * 7.5;
+        const liftY = -3.8 - getDeterministicJitter(index, 2) * 4.5;
+        const midX = (block.x + 0.5 + slot.x) / 2 + burstX * 0.22;
+        const midY = Math.min(19.2, Math.max(0.2, (visibleY + slot.y) / 2 + 3));
+
+        return (
+          <span
+            key={`${block.x}-${block.y}-${index}`}
+            style={
+              {
+                "--start-x": block.x + 0.5,
+                "--start-y": visibleY + 0.5,
+                "--lift-x": block.x + 0.5 + burstX,
+                "--lift-y": visibleY + liftY,
+                "--mid-x": midX,
+                "--mid-y": midY,
+                "--final-x": slot.x,
+                "--final-y": slot.y,
+                "--spin-a": `${((index % 9) - 4) * 18}deg`,
+                "--spin-b": `${((index % 11) - 5) * -24}deg`,
+                "--spin-final": `${((index % 7) - 3) * 1.3}deg`,
+                "--fall-delay": `${Math.min(index * 12, 420)}ms`,
+              } as CSSProperties
+            }
+          />
+        );
+      })}
+    </div>
+  );
+};
+
 export const GamePage = () => {
   usePerformanceTrace("page.game");
   usePageTransitionTrace("game");
@@ -216,6 +291,7 @@ export const GamePage = () => {
   const runStartedAtRef = useRef<number | null>(null);
   const comboToastTimerRef = useRef<number | null>(null);
   const [visibleCombo, setVisibleCombo] = useState<number | null>(null);
+  const [showFailureOverlay, setShowFailureOverlay] = useState(false);
 
   const {
     bag,
@@ -228,8 +304,16 @@ export const GamePage = () => {
     skillCooldowns,
     skillUses,
     helpOpen,
+    failureBlocks,
     startLevel,
     resetRun,
+    moveLeft,
+    moveRight,
+    rotateClockwise,
+    rotateCounterClockwise,
+    softDrop,
+    hardDrop,
+    holdBlock,
     useSkill: activateSkill,
     togglePause,
     toggleHelp,
@@ -245,8 +329,16 @@ export const GamePage = () => {
       skillCooldowns: state.skillCooldowns,
       skillUses: state.skillUses,
       helpOpen: state.helpOpen,
+      failureBlocks: state.failureBlocks,
       startLevel: state.startLevel,
       resetRun: state.resetRun,
+      moveLeft: state.moveLeft,
+      moveRight: state.moveRight,
+      rotateClockwise: state.rotateClockwise,
+      rotateCounterClockwise: state.rotateCounterClockwise,
+      softDrop: state.softDrop,
+      hardDrop: state.hardDrop,
+      holdBlock: state.holdBlock,
       useSkill: state.useSkill,
       togglePause: state.togglePause,
       toggleHelp: state.toggleHelp,
@@ -281,6 +373,46 @@ export const GamePage = () => {
       }
     },
     [],
+  );
+
+  useEffect(() => {
+    if (status !== "failed") {
+      setShowFailureOverlay(false);
+
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setShowFailureOverlay(true);
+    }, failureOverlayDelayMs);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [status]);
+
+  useKeyBindings(
+    {
+      ArrowLeft: () => moveLeft(),
+      ArrowRight: () => moveRight(),
+      ArrowDown: () => softDrop(),
+      KeyS: () => softDrop(),
+      Space: () => hardDrop(),
+      KeyA: () => rotateCounterClockwise(),
+      KeyD: () => rotateClockwise(),
+      ShiftLeft: () => holdBlock(),
+      ShiftRight: () => holdBlock(),
+      KeyQ: () => activateSkill("Q"),
+      KeyW: () => activateSkill("W"),
+      KeyE: () => activateSkill("E"),
+      KeyR: () => activateSkill("R"),
+      Escape: () => togglePause(),
+      F1: () => toggleHelp(),
+      Enter: () => {
+        if (status === "levelIntro") {
+          startLevel();
+        }
+      },
+    },
+    true,
   );
 
   const handleViewResults = useMeasuredHandler("ui.game.viewResults", () => {
@@ -422,7 +554,7 @@ export const GamePage = () => {
       );
     }
 
-    if (status === "failed") {
+    if (status === "failed" && showFailureOverlay) {
       return (
         <div className="game-overlay game-overlay--failed" role="status">
           <strong>LEVEL {level}</strong>
@@ -448,6 +580,7 @@ export const GamePage = () => {
     handleViewResults,
     level,
     resetRun,
+    showFailureOverlay,
     startLevel,
     status,
     targetScore,
@@ -530,7 +663,11 @@ export const GamePage = () => {
                 {targetScore === null ? "SURVIVE" : formatNumber(targetScore)}
               </span>
             </div>
-            <GameCanvas />
+            {status === "failed" ? (
+              <FailurePhysicsPile blocks={failureBlocks} />
+            ) : (
+              <GameCanvas />
+            )}
             {visibleCombo !== null ? (
               <div className="combo-toast" role="status">
                 {visibleCombo} COMBO

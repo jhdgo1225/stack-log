@@ -40,6 +40,35 @@ const comboToastPop = keyframes({
   },
 });
 
+const failureBlockCollapse = keyframes({
+  "0%": {
+    opacity: 1,
+    transform:
+      "translate(calc(11px + ((var(--start-x) - 0.5) * (var(--cell-size) + var(--cell-gap)))), calc(11px + ((var(--start-y) - 0.5) * (var(--cell-size) + var(--cell-gap))))) rotate(0deg) scale(1)",
+  },
+  "18%": {
+    transform:
+      "translate(calc(11px + ((var(--lift-x) - 0.5) * (var(--cell-size) + var(--cell-gap)))), calc(11px + ((var(--lift-y) - 0.5) * (var(--cell-size) + var(--cell-gap))))) rotate(var(--spin-a)) scale(1.02)",
+  },
+  "52%": {
+    transform:
+      "translate(calc(11px + ((var(--mid-x) - 0.5) * (var(--cell-size) + var(--cell-gap)))), calc(11px + ((var(--mid-y) - 0.5) * (var(--cell-size) + var(--cell-gap))))) rotate(var(--spin-b)) scale(1)",
+  },
+  "72%": {
+    transform:
+      "translate(calc(11px + ((var(--final-x) - 0.5) * (var(--cell-size) + var(--cell-gap)))), calc(11px + ((var(--final-y) - 0.5) * (var(--cell-size) + var(--cell-gap)) - (var(--cell-size) * 0.72)))) rotate(calc(var(--spin-final) * -1)) scale(0.98)",
+  },
+  "86%": {
+    transform:
+      "translate(calc(11px + ((var(--final-x) - 0.5) * (var(--cell-size) + var(--cell-gap)))), calc(11px + ((var(--final-y) - 0.5) * (var(--cell-size) + var(--cell-gap)) + (var(--cell-size) * 0.12)))) rotate(calc(var(--spin-final) * 1.25)) scale(1.01)",
+  },
+  "100%": {
+    opacity: 1,
+    transform:
+      "translate(calc(11px + ((var(--final-x) - 0.5) * (var(--cell-size) + var(--cell-gap)))), calc(11px + ((var(--final-y) - 0.5) * (var(--cell-size) + var(--cell-gap))))) rotate(var(--spin-final)) scale(1)",
+  },
+});
+
 globalStyle(".page-game", {
   height: "100dvh",
   minHeight: "100dvh",
@@ -53,8 +82,7 @@ globalStyle(".page-game", {
       "calc((12 * var(--cell-size)) + (11 * var(--cell-gap)) + 22px)",
     "--visible-board-height":
       "calc((21 * var(--cell-size)) + (20 * var(--cell-gap)) + 22px)",
-    "--game-board-height":
-      "calc((21 * var(--cell-size)) + (20 * var(--cell-gap)) + 22px)",
+    "--game-board-height": "var(--visible-board-height)",
   },
 });
 
@@ -67,7 +95,8 @@ globalStyle(".game-playfield", {
   alignContent: "center",
   alignItems: "center",
   gap: 0,
-  padding: "clamp(12px, 2vh, 18px) clamp(14px, 3vw, 24px) clamp(12px, 2vh, 18px)",
+  padding:
+    "clamp(12px, 2vh, 18px) clamp(14px, 3vw, 24px) clamp(12px, 2vh, 18px)",
   borderRadius: 0,
   background:
     "linear-gradient(180deg, rgba(255, 250, 246, 0.08) 0%, rgba(29, 24, 20, 0.12) 48%, rgba(16, 12, 10, 0.28) 100%), var(--character-theme-image, none)",
@@ -405,9 +434,12 @@ globalStyle(".skill-passive-note", {
   lineHeight: 1,
 });
 
-globalStyle(".skill-slot--passive .skill-cooldown, .skill-slot--passive .skill-icon-timer", {
-  display: "none",
-});
+globalStyle(
+  ".skill-slot--passive .skill-cooldown, .skill-slot--passive .skill-icon-timer",
+  {
+    display: "none",
+  },
+);
 
 globalStyle(".skill-slot--passive .skill-key", {
   color: ink,
@@ -516,7 +548,8 @@ globalStyle(".active-block-cell", {
     "0 0 0 1px rgba(255, 255, 255, 0.82) inset, 0 0 22px color-mix(in srgb, var(--character-color) 58%, transparent), 0 7px 16px color-mix(in srgb, var(--character-color) 38%, transparent)",
   transform:
     "translate(calc(var(--active-x) * (var(--cell-size) + var(--cell-gap))), calc(var(--active-y) * (var(--cell-size) + var(--cell-gap))))",
-  transition: "transform 0.1s ease-out, filter 0.1s ease-out, box-shadow 0.1s ease-out",
+  transition:
+    "transform 0.1s ease-out, filter 0.1s ease-out, box-shadow 0.1s ease-out",
   filter: "saturate(1.08) brightness(1.02)",
   willChange: "transform",
 });
@@ -567,9 +600,12 @@ globalStyle('.game-cell[data-state="3"]', {
     "inset 0 0 0 1px rgba(255, 255, 255, 0.6), inset 0 -3px 10px rgba(0, 0, 0, 0.08), 0 1px 0 rgba(255, 255, 255, 0.35)",
 });
 
-globalStyle('.game-cell[data-state="3"]::before, .game-cell[data-state="3"]::after', {
-  content: "none",
-});
+globalStyle(
+  '.game-cell[data-state="3"]::before, .game-cell[data-state="3"]::after',
+  {
+    content: "none",
+  },
+);
 
 globalStyle('.game-cell[data-state="4"]', {
   backgroundColor: "color-mix(in srgb, var(--character-color) 20%, #ffffff)",
@@ -703,7 +739,8 @@ globalStyle(".mini-block-grid span", {
   backgroundRepeat: "no-repeat",
   backgroundPosition: "center center",
   backgroundSize: "contain",
-  boxShadow: "0 0 10px color-mix(in srgb, var(--character-color) 38%, transparent)",
+  boxShadow:
+    "0 0 10px color-mix(in srgb, var(--character-color) 38%, transparent)",
 });
 
 globalStyle(".hold-panel .mini-block-grid", {
@@ -722,15 +759,16 @@ globalStyle(".hold-panel .mini-block-grid span", {
 });
 
 globalStyle(".failure-pile", {
-  width: "min(480px, 76vw)",
-  height: 420,
+  width: "var(--visible-board-width)",
+  height: "var(--visible-board-height)",
   position: "relative",
+  overflow: "hidden",
 });
 
 globalStyle(".failure-pile span", {
   position: "absolute",
-  left: "var(--pile-x)",
-  top: "var(--pile-y)",
+  left: 0,
+  top: 0,
   width: "var(--cell-size)",
   aspectRatio: "1",
   borderRadius: 4,
@@ -739,8 +777,11 @@ globalStyle(".failure-pile span", {
   backgroundRepeat: "no-repeat",
   backgroundPosition: "center center",
   backgroundSize: "contain",
-  transform: "rotate(var(--pile-rotate))",
-  boxShadow: "0 5px 9px color-mix(in srgb, var(--character-color) 24%, transparent)",
+  boxShadow:
+    "0 5px 9px color-mix(in srgb, var(--character-color) 24%, transparent)",
+  animation: `${failureBlockCollapse} 1.48s cubic-bezier(0.2, 0.88, 0.22, 1) both`,
+  animationDelay: "var(--fall-delay)",
+  willChange: "transform",
 });
 
 globalStyle(".help-backdrop", {
@@ -840,7 +881,8 @@ globalStyle(".game-core", {
       marginTop: 0,
     },
     "(max-width: 640px)": {
-      gridTemplateAreas: '"left board right"',
+      gridTemplateColumns: "minmax(0, 1fr) auto minmax(0, 1fr)",
+      gridTemplateAreas: '"spacer left right-spacer" "spacer board right"',
       alignContent: "start",
       alignItems: "start",
       gap: 6,
@@ -865,6 +907,12 @@ globalStyle(".game-playfield", {
 globalStyle(".character-orbit", {
   "@media": {
     "(max-width: 980px) and (min-width: 641px)": {
+      transform: "none",
+      minHeight: 0,
+      margin: 0,
+      width: "100%",
+    },
+    "(max-width: 640px)": {
       transform: "none",
       minHeight: 0,
       margin: 0,
@@ -896,7 +944,7 @@ globalStyle(".game-left-rail, .game-right-rail", {
       gap: 12,
     },
     "(max-width: 640px)": {
-      gap: 8,
+      gap: 4,
     },
   },
 });
@@ -911,7 +959,11 @@ globalStyle(".game-left-rail", {
     "(max-width: 640px)": {
       gridArea: "left",
       order: "0",
-      justifySelf: "end",
+      justifySelf: "center",
+      alignSelf: "end",
+      maxWidth: "var(--visible-board-width)",
+      marginTop: 0,
+      gap: 0,
     },
   },
 });
@@ -960,8 +1012,9 @@ globalStyle(".skill-slots", {
       gap: "7px 8px",
     },
     "(max-width: 640px)": {
-      gridTemplateColumns: "repeat(6, calc(var(--skill-slot-size) / 2))",
-      gap: "8px 6px",
+      gridTemplateColumns: "repeat(5, var(--skill-slot-size))",
+      gap: 14,
+      justifyItems: "center",
     },
   },
 });
@@ -972,7 +1025,7 @@ globalStyle(".skill-slot", {
       gridColumn: "span 2",
     },
     "(max-width: 640px)": {
-      gridColumn: "span 2",
+      gridColumn: "auto",
       width: 52,
       minWidth: 52,
       height: 84,
@@ -986,7 +1039,7 @@ globalStyle(".skill-slot:nth-child(4)", {
       gridColumn: "2 / span 2",
     },
     "(max-width: 640px)": {
-      gridColumn: "2 / span 2",
+      gridColumn: "auto",
     },
   },
 });
