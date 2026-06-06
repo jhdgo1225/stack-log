@@ -20,8 +20,6 @@ import { useFpsMonitor } from "@/shared/lib/performance/useFpsMonitor";
 import { useMeasuredHandler } from "@/shared/lib/performance/useMeasuredHandler";
 import { usePageTransitionTrace } from "@/shared/lib/performance/usePageTransitionTrace";
 import { usePerformanceTrace } from "@/shared/lib/performance/usePerformanceTrace";
-import { useKeyBindings } from "@/shared/lib/useKeyBindings";
-import { useRafInterval } from "@/shared/lib/useRafInterval";
 import { Button } from "@/shared/ui/Button";
 import { GameCanvas } from "@/widgets/gameCanvas/ui/GameCanvas";
 import "./game.css.ts";
@@ -193,38 +191,6 @@ const HelpModal = ({ onClose }: { onClose: () => void }) => {
   );
 };
 
-const FailurePile = ({
-  blocks,
-}: {
-  blocks: Array<{ x: number; y: number }>;
-}) => {
-  let visibleBlocks = blocks;
-
-  if (!visibleBlocks.length) {
-    visibleBlocks = Array.from({ length: 80 }, (_, index) => ({
-      x: index % 12,
-      y: Math.floor(index / 12),
-    }));
-  }
-
-  return (
-    <div className="failure-pile" aria-hidden="true">
-      {visibleBlocks.slice(0, 120).map((block, index) => (
-        <span
-          key={`${block.x}-${block.y}-${index}`}
-          style={
-            {
-              "--pile-x": `${(block.x / 12) * 82 + 6}%`,
-              "--pile-y": `${92 - (index % 9) * 3}%`,
-              "--pile-rotate": `${((index % 7) - 3) * 9}deg`,
-            } as CSSProperties
-          }
-        />
-      ))}
-    </div>
-  );
-};
-
 export const GamePage = () => {
   usePerformanceTrace("page.game");
   usePageTransitionTrace("game");
@@ -249,12 +215,9 @@ export const GamePage = () => {
   const hasSavedScore = useRef(false);
   const runStartedAtRef = useRef<number | null>(null);
   const comboToastTimerRef = useRef<number | null>(null);
-  const [, setCooldownPulseMs] = useState(0);
   const [visibleCombo, setVisibleCombo] = useState<number | null>(null);
 
   const {
-    board,
-    active,
     bag,
     heldBlock,
     status,
@@ -262,31 +225,16 @@ export const GamePage = () => {
     score,
     targetScore,
     combo,
-    speedMs,
     skillCooldowns,
     skillUses,
-    obstaclePreviewBlocks,
     helpOpen,
-    failureBlocks,
-    tick,
-    tickSkillCooldowns,
     startLevel,
-    continueAfterClear,
     resetRun,
-    moveLeft,
-    moveRight,
-    rotateClockwise,
-    rotateCounterClockwise,
-    softDrop,
-    hardDrop,
-    holdBlock,
     useSkill: activateSkill,
     togglePause,
     toggleHelp,
   } = useGameStore(
     useShallow((state) => ({
-      board: state.board,
-      active: state.active,
       bag: state.bag,
       heldBlock: state.heldBlock,
       status: state.status,
@@ -294,24 +242,11 @@ export const GamePage = () => {
       score: state.score,
       targetScore: state.targetScore,
       combo: state.combo,
-      speedMs: state.speedMs,
       skillCooldowns: state.skillCooldowns,
       skillUses: state.skillUses,
-      obstaclePreviewBlocks: state.obstaclePreviewBlocks,
       helpOpen: state.helpOpen,
-      failureBlocks: state.failureBlocks,
-      tick: state.tick,
-      tickSkillCooldowns: state.tickSkillCooldowns,
       startLevel: state.startLevel,
-      continueAfterClear: state.continueAfterClear,
       resetRun: state.resetRun,
-      moveLeft: state.moveLeft,
-      moveRight: state.moveRight,
-      rotateClockwise: state.rotateClockwise,
-      rotateCounterClockwise: state.rotateCounterClockwise,
-      softDrop: state.softDrop,
-      hardDrop: state.hardDrop,
-      holdBlock: state.holdBlock,
       useSkill: state.useSkill,
       togglePause: state.togglePause,
       toggleHelp: state.toggleHelp,
@@ -319,30 +254,6 @@ export const GamePage = () => {
   );
 
   useFpsMonitor(status === "playing", { label: "gameplay" });
-  useRafInterval(() => tick(), speedMs, status === "playing");
-
-  useEffect(() => {
-    if (status !== "playing") {
-      return undefined;
-    }
-
-    const timeoutId = window.setInterval(() => {
-      setCooldownPulseMs((current) => current + 1000);
-      tickSkillCooldowns();
-    }, 1000);
-
-    return () => window.clearInterval(timeoutId);
-  }, [status, tickSkillCooldowns]);
-
-  useEffect(() => {
-    if (status !== "levelClear") {
-      return undefined;
-    }
-
-    const timeoutId = window.setTimeout(() => continueAfterClear(), 5000);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [continueAfterClear, status]);
 
   useEffect(() => {
     if (combo < 2) {
@@ -370,32 +281,6 @@ export const GamePage = () => {
       }
     },
     [],
-  );
-
-  useKeyBindings(
-    {
-      ArrowLeft: () => moveLeft(),
-      ArrowRight: () => moveRight(),
-      ArrowDown: () => softDrop(),
-      KeyS: () => softDrop(),
-      Space: () => hardDrop(),
-      KeyA: () => rotateCounterClockwise(),
-      KeyD: () => rotateClockwise(),
-      ShiftLeft: () => holdBlock(),
-      ShiftRight: () => holdBlock(),
-      KeyQ: () => activateSkill("Q"),
-      KeyW: () => activateSkill("W"),
-      KeyE: () => activateSkill("E"),
-      KeyR: () => activateSkill("R"),
-      Escape: () => togglePause(),
-      F1: () => toggleHelp(),
-      Enter: () => {
-        if (status === "levelIntro") {
-          startLevel();
-        }
-      },
-    },
-    true,
   );
 
   const handleViewResults = useMeasuredHandler("ui.game.viewResults", () => {
@@ -645,17 +530,7 @@ export const GamePage = () => {
                 {targetScore === null ? "SURVIVE" : formatNumber(targetScore)}
               </span>
             </div>
-            {status === "failed" ? (
-              <FailurePile blocks={failureBlocks} />
-            ) : (
-              <GameCanvas
-                board={board}
-                active={active}
-                obstaclePreviewBlocks={
-                  status === "playing" ? obstaclePreviewBlocks : []
-                }
-              />
-            )}
+            <GameCanvas />
             {visibleCombo !== null ? (
               <div className="combo-toast" role="status">
                 {visibleCombo} COMBO
