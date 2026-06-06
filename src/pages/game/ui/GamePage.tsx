@@ -24,6 +24,7 @@ import { useKeyBindings } from "@/shared/lib/useKeyBindings";
 import { useRafInterval } from "@/shared/lib/useRafInterval";
 import { Button } from "@/shared/ui/Button";
 import { GameCanvas } from "@/widgets/gameCanvas/ui/GameCanvas";
+import "./game.css.ts";
 
 const pauseIconSrc = "/assets/icons/pause.svg";
 const resumeIconSrc = "/assets/icons/play-filled.svg";
@@ -72,10 +73,7 @@ const MiniBlock = ({
   const shape = getMiniShape(definition);
 
   return (
-    <div
-      className="mini-block"
-      data-muted={isMuted}
-      style={style}>
+    <div className="mini-block" data-muted={isMuted} style={style}>
       {label ? <span className="mini-block-label">{label}</span> : null}
       <div
         className="mini-block-grid"
@@ -84,7 +82,8 @@ const MiniBlock = ({
             "--mini-rows": shape.rows,
             "--mini-cols": shape.cols,
           } as CSSProperties
-        }>
+        }
+      >
         {shape.cells.map((cell, index) => (
           <span
             key={`${cell.x}-${cell.y}-${index}`}
@@ -482,7 +481,8 @@ export const GamePage = () => {
         <div
           key={skill.id}
           className="skill-slot skill-slot--passive"
-          data-ready="true">
+          data-ready="true"
+        >
           {sharedContent}
         </div>
       );
@@ -494,7 +494,8 @@ export const GamePage = () => {
         type="button"
         className="skill-slot"
         data-ready={skillCooldowns[activeKey] <= 0}
-        onClick={() => handleActivateSkill(activeKey)}>
+        onClick={() => handleActivateSkill(activeKey)}
+      >
         {sharedContent}
       </button>
     );
@@ -548,7 +549,8 @@ export const GamePage = () => {
             <button
               type="button"
               className="text-link"
-              onClick={handleViewResults}>
+              onClick={handleViewResults}
+            >
               View results
             </button>
           </div>
@@ -568,9 +570,7 @@ export const GamePage = () => {
   ]);
 
   return (
-    <div
-      className="page page-game"
-      style={characterThemeStyle}>
+    <div className="page page-game" style={characterThemeStyle}>
       <div className="game-playfield">
         <div className="game-topbar">
           <div className="topbar-actions" aria-label="Game actions">
@@ -578,7 +578,8 @@ export const GamePage = () => {
               type="button"
               className="icon-button icon-button--pause"
               aria-label={status === "paused" ? "재개" : "중지"}
-              onClick={togglePause}>
+              onClick={togglePause}
+            >
               <img
                 src={status === "paused" ? resumeIconSrc : pauseIconSrc}
                 alt=""
@@ -591,7 +592,8 @@ export const GamePage = () => {
               type="button"
               className="icon-button icon-button--settings"
               aria-label="설정"
-              onClick={toggleHelp}>
+              onClick={toggleHelp}
+            >
               <img
                 src={settingsIconSrc}
                 alt=""
@@ -604,7 +606,8 @@ export const GamePage = () => {
               type="button"
               className="icon-button icon-button--exit"
               aria-label="나가기"
-              onClick={() => void navigate(APP_ROUTES.MAIN)}>
+              onClick={() => void navigate(APP_ROUTES.MAIN)}
+            >
               <img
                 src={exitIconSrc}
                 alt=""
@@ -638,7 +641,8 @@ export const GamePage = () => {
               <span>LEVEL {level}</span>
               <strong>{formatNumber(score)}</strong>
               <span>
-                목표 {targetScore === null ? "SURVIVE" : formatNumber(targetScore)}
+                목표{" "}
+                {targetScore === null ? "SURVIVE" : formatNumber(targetScore)}
               </span>
             </div>
             {status === "failed" ? (
