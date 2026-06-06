@@ -21,7 +21,6 @@ import { useMeasuredHandler } from "@/shared/lib/performance/useMeasuredHandler"
 import { usePageTransitionTrace } from "@/shared/lib/performance/usePageTransitionTrace";
 import { usePerformanceTrace } from "@/shared/lib/performance/usePerformanceTrace";
 import { useKeyBindings } from "@/shared/lib/useKeyBindings";
-import { useRafInterval } from "@/shared/lib/useRafInterval";
 import { Button } from "@/shared/ui/Button";
 import { GameCanvas } from "@/widgets/gameCanvas/ui/GameCanvas";
 import "./game.css.ts";
@@ -291,13 +290,10 @@ export const GamePage = () => {
   const hasSavedScore = useRef(false);
   const runStartedAtRef = useRef<number | null>(null);
   const comboToastTimerRef = useRef<number | null>(null);
-  const [, setCooldownPulseMs] = useState(0);
   const [visibleCombo, setVisibleCombo] = useState<number | null>(null);
   const [showFailureOverlay, setShowFailureOverlay] = useState(false);
 
   const {
-    board,
-    active,
     bag,
     heldBlock,
     status,
@@ -305,16 +301,11 @@ export const GamePage = () => {
     score,
     targetScore,
     combo,
-    speedMs,
     skillCooldowns,
     skillUses,
-    obstaclePreviewBlocks,
     helpOpen,
     failureBlocks,
-    tick,
-    tickSkillCooldowns,
     startLevel,
-    continueAfterClear,
     resetRun,
     moveLeft,
     moveRight,
@@ -328,8 +319,6 @@ export const GamePage = () => {
     toggleHelp,
   } = useGameStore(
     useShallow((state) => ({
-      board: state.board,
-      active: state.active,
       bag: state.bag,
       heldBlock: state.heldBlock,
       status: state.status,
@@ -337,16 +326,11 @@ export const GamePage = () => {
       score: state.score,
       targetScore: state.targetScore,
       combo: state.combo,
-      speedMs: state.speedMs,
       skillCooldowns: state.skillCooldowns,
       skillUses: state.skillUses,
-      obstaclePreviewBlocks: state.obstaclePreviewBlocks,
       helpOpen: state.helpOpen,
       failureBlocks: state.failureBlocks,
-      tick: state.tick,
-      tickSkillCooldowns: state.tickSkillCooldowns,
       startLevel: state.startLevel,
-      continueAfterClear: state.continueAfterClear,
       resetRun: state.resetRun,
       moveLeft: state.moveLeft,
       moveRight: state.moveRight,
@@ -362,30 +346,6 @@ export const GamePage = () => {
   );
 
   useFpsMonitor(status === "playing", { label: "gameplay" });
-  useRafInterval(() => tick(), speedMs, status === "playing");
-
-  useEffect(() => {
-    if (status !== "playing") {
-      return undefined;
-    }
-
-    const timeoutId = window.setInterval(() => {
-      setCooldownPulseMs((current) => current + 1000);
-      tickSkillCooldowns();
-    }, 1000);
-
-    return () => window.clearInterval(timeoutId);
-  }, [status, tickSkillCooldowns]);
-
-  useEffect(() => {
-    if (status !== "levelClear") {
-      return undefined;
-    }
-
-    const timeoutId = window.setTimeout(() => continueAfterClear(), 5000);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [continueAfterClear, status]);
 
   useEffect(() => {
     if (combo < 2) {
@@ -706,13 +666,7 @@ export const GamePage = () => {
             {status === "failed" ? (
               <FailurePhysicsPile blocks={failureBlocks} />
             ) : (
-              <GameCanvas
-                board={board}
-                active={active}
-                obstaclePreviewBlocks={
-                  status === "playing" ? obstaclePreviewBlocks : []
-                }
-              />
+              <GameCanvas />
             )}
             {visibleCombo !== null ? (
               <div className="combo-toast" role="status">

@@ -1100,13 +1100,35 @@ globalStyle(".help-grid", {
   },
 });
 
-globalStyle(".game-board", {
+globalStyle(".phaser-board-shell", {
   "@media": {
     "(max-width: 640px)": {
       gap: "var(--cell-gap)",
       padding: 10,
     },
   },
+});
+
+globalStyle(".phaser-board-shell", {
+  width: "var(--visible-board-width)",
+  height: "var(--visible-board-height)",
+  display: "block",
+  position: "relative",
+  padding: 0,
+  gap: 0,
+  overflow: "hidden",
+  borderRadius: 14,
+  background:
+    "linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0.66)), rgba(255, 255, 255, 0.76)",
+  border: "1px solid rgba(26, 23, 19, 0.2)",
+  boxShadow: "inset 0 0 0 2px rgba(255, 255, 255, 0.5)",
+  backdropFilter: "blur(8px)",
+});
+
+globalStyle(".phaser-board-shell canvas", {
+  display: "block",
+  width: "100%",
+  height: "100%",
 });
 
 globalStyle(".skill-icon-shell", {

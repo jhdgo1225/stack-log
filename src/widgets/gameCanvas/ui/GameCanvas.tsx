@@ -1,156 +1,91 @@
-import type { CSSProperties } from "react";
+import { useEffect, useRef } from "react";
 
-import type { ActiveBlock, Board, Point } from "@/entities/game";
-import {
-  canPlaceCells,
-  getAbsoluteCells,
-  getRenderBoard,
-  HIDDEN_ROWS,
-} from "@/entities/game";
+import * as Phaser from "phaser";
+
+import { GameScene } from "@/widgets/gameCanvas/model/phaserGameScene";
 import { usePerformanceTrace } from "@/shared/lib/performance/usePerformanceTrace";
 
-type GameCanvasProps = {
-  board: Board;
-  active: ActiveBlock | null;
-  obstaclePreviewBlocks?: Point[][];
-};
+export const GameCanvas = () => {
+  usePerformanceTrace("widget.gameCanvas");
 
-export const GameCanvas = ({
-  board,
-  active,
-  obstaclePreviewBlocks = [],
-}: GameCanvasProps) => {
-  usePerformanceTrace("widget.gameCanvas", {
-    meta: {
-      rows: board.length,
-      cols: board[0]?.length ?? 0,
-    },
-  });
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const gameRef = useRef<Phaser.Game | null>(null);
 
-  const renderBoard = getRenderBoard(board, null);
-  const rows = renderBoard.length;
-  const cols = renderBoard[0]?.length ?? 0;
-  const activeCells =
-    active?.cells
-      .map((cell, index) => ({
-        id: `${active.id}-${index}`,
-        x: active.position.x + cell.x,
-        y: active.position.y + cell.y - HIDDEN_ROWS,
-      }))
-      .filter((cell) => cell.y >= 0 && cell.y < rows) ?? [];
-  const ghostCells =
-    active !== null
-      ? (() => {
-          let ghostPosition = {
-            ...active.position,
-          };
+  useEffect(() => {
+    const container = containerRef.current;
+    const renderScale = Math.max(1, window.devicePixelRatio || 1);
 
-          while (
-            canPlaceCells(
-              board,
-              getAbsoluteCells({
-                ...active,
-                position: { x: ghostPosition.x, y: ghostPosition.y + 1 },
-              }),
-            )
-          ) {
-            ghostPosition = {
-              x: ghostPosition.x,
-              y: ghostPosition.y + 1,
-            };
-          }
+    if (!container) {
+      return undefined;
+    }
 
-          return getAbsoluteCells({
-            ...active,
-            position: ghostPosition,
-          })
-            .map((cell, index) => ({
-              id: `${active.id}-ghost-${index}`,
-              x: cell.x,
-              y: cell.y - HIDDEN_ROWS,
-            }))
-            .filter((cell) => cell.y >= 0 && cell.y < rows);
-        })()
-      : [];
-  const previewCells = obstaclePreviewBlocks
-    .flatMap((block, blockIndex) =>
-      block.map((cell, cellIndex) => ({
-        id: `obstacle-preview-${blockIndex}-${cellIndex}`,
-        x: cell.x,
-        y: cell.y - HIDDEN_ROWS,
-      })),
-    )
-    .filter((cell) => cell.y >= 0 && cell.y < rows);
+    const game = new Phaser.Game({
+      type: Phaser.AUTO,
+      parent: container,
+      transparent: true,
+      backgroundColor: "#000000",
+      pixelArt: false,
+      roundPixels: true,
+      antialias: true,
+      scale: {
+        mode: Phaser.Scale.NONE,
+        width: Math.max(1, Math.round(container.clientWidth * renderScale)),
+        height: Math.max(1, Math.round(container.clientHeight * renderScale)),
+      },
+      input: {
+        keyboard: {
+          capture: [
+            Phaser.Input.Keyboard.KeyCodes.LEFT,
+            Phaser.Input.Keyboard.KeyCodes.RIGHT,
+            Phaser.Input.Keyboard.KeyCodes.UP,
+            Phaser.Input.Keyboard.KeyCodes.DOWN,
+            Phaser.Input.Keyboard.KeyCodes.SPACE,
+            Phaser.Input.Keyboard.KeyCodes.A,
+            Phaser.Input.Keyboard.KeyCodes.D,
+            Phaser.Input.Keyboard.KeyCodes.S,
+            Phaser.Input.Keyboard.KeyCodes.Q,
+            Phaser.Input.Keyboard.KeyCodes.W,
+            Phaser.Input.Keyboard.KeyCodes.E,
+            Phaser.Input.Keyboard.KeyCodes.R,
+            Phaser.Input.Keyboard.KeyCodes.SHIFT,
+            Phaser.Input.Keyboard.KeyCodes.ESC,
+            Phaser.Input.Keyboard.KeyCodes.F1,
+          ],
+        },
+      },
+      scene: [GameScene],
+    });
+
+    gameRef.current = game;
+
+    const resize = () => {
+      const width = Math.max(1, Math.round(container.clientWidth * renderScale));
+      const height = Math.max(1, Math.round(container.clientHeight * renderScale));
+
+      game.scale.resize(width, height);
+
+      if (game.canvas) {
+        game.canvas.style.width = `${container.clientWidth}px`;
+        game.canvas.style.height = `${container.clientHeight}px`;
+      }
+    };
+
+    const observer = new ResizeObserver(resize);
+    observer.observe(container);
+    resize();
+
+    return () => {
+      observer.disconnect();
+      gameRef.current = null;
+      game.destroy(true);
+    };
+  }, []);
 
   return (
     <div
-      className="game-board"
-      role="grid"
+      ref={containerRef}
+      className="phaser-board-shell"
       aria-label="Game board"
-      style={
-        {
-          "--rows": rows,
-          "--cols": cols,
-        } as CSSProperties
-      }
-    >
-      {renderBoard.map((row, rowIndex) =>
-        row.map((cell, colIndex) => (
-          <div
-            key={`cell-${rowIndex}-${colIndex}`}
-            className="game-cell"
-            data-state={cell}
-            role="gridcell"
-            aria-hidden="true"
-          />
-        )),
-      )}
-      {ghostCells.length > 0 ? (
-        <div className="ghost-block-layer" aria-hidden="true">
-          {ghostCells.map((cell) => (
-            <span
-              key={cell.id}
-              className="ghost-block-cell"
-              style={
-                {
-                  "--ghost-x": cell.x,
-                  "--ghost-y": cell.y,
-                } as CSSProperties
-              }
-            />
-          ))}
-        </div>
-      ) : null}
-      <div className="active-block-layer" aria-hidden="true">
-        {activeCells.map((cell) => (
-          <span
-            key={cell.id}
-            className="active-block-cell"
-            style={
-              {
-                "--active-x": cell.x,
-                "--active-y": cell.y,
-              } as CSSProperties
-            }
-          />
-        ))}
-      </div>
-      {previewCells.length > 0 ? (
-        <div className="obstacle-preview-layer" aria-hidden="true">
-          {previewCells.map((cell) => (
-            <span
-              key={cell.id}
-              className="obstacle-preview-cell"
-              style={
-                {
-                  "--preview-x": cell.x,
-                  "--preview-y": cell.y,
-                } as CSSProperties
-              }
-            />
-          ))}
-        </div>
-      ) : null}
-    </div>
+    />
   );
 };

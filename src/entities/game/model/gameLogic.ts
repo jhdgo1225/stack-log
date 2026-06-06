@@ -4,6 +4,7 @@ import {
   HIDDEN_ROWS,
   LEVEL_TARGET_SCORES,
   MIN_SPEED_MS,
+  OBSTACLE_FALL_DURATION_MS,
   OBSTACLE_WARNING_MS,
   OBSTACLE_RULES,
   SKILL_SCORE,
@@ -305,6 +306,7 @@ export const createInitialGameData = (
   skillUses,
   obstacleElapsedMs: 0,
   obstacleWarningMs: 0,
+  obstacleFallMs: 0,
   obstaclePreviewBlocks: [],
   helpOpen: false,
   failureBlocks: [],
@@ -888,6 +890,7 @@ const applyObstaclePlacements = (
           ...state,
           board: nextBoard,
           failureBlocks: getFailureBlocks(nextBoard),
+          obstacleFallMs: 0,
           obstaclePreviewBlocks: [],
         },
         status: "failed" as GameStatus,
@@ -902,6 +905,7 @@ const applyObstaclePlacements = (
           ...state,
           board: nextBoard,
           failureBlocks: getFailureBlocks(nextBoard),
+          obstacleFallMs: 0,
           obstaclePreviewBlocks: [],
         },
         status: "failed" as GameStatus,
@@ -915,30 +919,34 @@ const applyObstaclePlacements = (
   return {
     next: {
       ...scored,
+      obstacleFallMs: 0,
       obstaclePreviewBlocks: [],
     },
     status: getStatusAfterScore(scored),
   };
 };
 
+const getObstacleFallMs = (state: GameData) =>
+  state.obstacleFallMs > 0 ? state.obstacleFallMs : 0;
+
 export const tickObstacles = (
   state: GameData,
   elapsedMs: number,
   rng = Math.random,
 ) => {
-  if (state.obstacleWarningMs > 0) {
-    const nextWarningMs = Math.max(0, state.obstacleWarningMs - elapsedMs);
-    const adjustedPreviewBlocks = getAdjustedObstaclePreviewBlocks(
-      state.board,
-      state.obstaclePreviewBlocks,
-    );
+  const rule = OBSTACLE_RULES[state.level] ?? OBSTACLE_RULES[20];
+  const warningStartMs = Math.max(0, rule.intervalMs - OBSTACLE_WARNING_MS);
+  const fallDurationMs = OBSTACLE_FALL_DURATION_MS;
 
-    if (nextWarningMs > 0) {
+  if (state.obstaclePreviewBlocks.length > 0 && state.obstacleWarningMs === 0) {
+    const nextFallMs = getObstacleFallMs(state) + elapsedMs;
+
+    if (nextFallMs < fallDurationMs) {
       return {
         next: {
           ...state,
-          obstacleWarningMs: nextWarningMs,
-          obstaclePreviewBlocks: adjustedPreviewBlocks,
+          obstacleElapsedMs: 0,
+          obstacleFallMs: nextFallMs,
         },
         status: "playing" as GameStatus,
       };
@@ -947,33 +955,107 @@ export const tickObstacles = (
     return applyObstaclePlacements(
       {
         ...state,
-        obstacleWarningMs: 0,
+        obstacleElapsedMs: 0,
+        obstacleFallMs: fallDurationMs,
       },
-      state.obstaclePreviewBlocks.length
-        ? adjustedPreviewBlocks
-        : collectObstaclePreviewBlocks(state, rng),
+      state.obstaclePreviewBlocks,
     );
   }
 
-  const rule = OBSTACLE_RULES[state.level] ?? OBSTACLE_RULES[20];
+  if (state.obstacleWarningMs > 0) {
+    const nextElapsed = state.obstacleElapsedMs + elapsedMs;
+    const nextWarningMs = Math.max(0, rule.intervalMs - nextElapsed);
+    const adjustedPreviewBlocks = getAdjustedObstaclePreviewBlocks(
+      state.board,
+      state.obstaclePreviewBlocks,
+    );
+
+    if (nextElapsed < rule.intervalMs) {
+      return {
+        next: {
+          ...state,
+          obstacleElapsedMs: nextElapsed,
+          obstacleWarningMs: nextWarningMs,
+          obstacleFallMs: 0,
+          obstaclePreviewBlocks: adjustedPreviewBlocks,
+        },
+        status: "playing" as GameStatus,
+      };
+    }
+
+    const fallMs = nextElapsed - rule.intervalMs;
+    const fallingState = {
+      ...state,
+      obstacleElapsedMs: 0,
+      obstacleWarningMs: 0,
+      obstacleFallMs: fallMs,
+      obstaclePreviewBlocks: adjustedPreviewBlocks,
+    };
+
+    if (fallMs < fallDurationMs) {
+      return {
+        next: fallingState,
+        status: "playing" as GameStatus,
+      };
+    }
+
+    return applyObstaclePlacements(
+      {
+        ...fallingState,
+        obstacleFallMs: fallDurationMs,
+      },
+      adjustedPreviewBlocks,
+    );
+  }
+
   const elapsed = state.obstacleElapsedMs + elapsedMs;
 
-  if (elapsed < rule.intervalMs) {
+  if (elapsed < warningStartMs) {
     return {
       next: {
         ...state,
         obstacleElapsedMs: elapsed,
+        obstacleFallMs: 0,
       },
       status: "playing" as GameStatus,
     };
   }
 
+  const previewBlocks = collectObstaclePreviewBlocks(state, rng);
+
+  if (elapsed >= rule.intervalMs) {
+    const fallMs = elapsed - rule.intervalMs;
+    const fallingState = {
+      ...state,
+      obstacleElapsedMs: 0,
+      obstacleWarningMs: 0,
+      obstacleFallMs: fallMs,
+      obstaclePreviewBlocks: previewBlocks,
+    };
+
+    if (fallMs < fallDurationMs) {
+      return {
+        next: fallingState,
+        status: "playing" as GameStatus,
+      };
+    }
+
+    return applyObstaclePlacements(
+      {
+        ...fallingState,
+        obstacleFallMs: fallDurationMs,
+      },
+      previewBlocks,
+    );
+  }
+
   return {
     next: {
       ...state,
-      obstacleElapsedMs: elapsed % rule.intervalMs,
-      obstacleWarningMs: OBSTACLE_WARNING_MS,
-      obstaclePreviewBlocks: collectObstaclePreviewBlocks(state, rng),
+      obstacleElapsedMs: elapsed,
+      obstacleWarningMs: rule.intervalMs - elapsed,
+      obstacleFallMs: 0,
+      obstaclePreviewBlocks: previewBlocks,
     },
     status: "playing" as GameStatus,
   };
