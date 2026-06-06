@@ -2,6 +2,7 @@ import { create } from "zustand";
 
 import { trackPerformanceSync } from "@/shared/lib/performance/performanceTelemetry";
 
+import { getGameEngineBridge } from "./gameBridge";
 import {
   LEVEL_CLEAR_DELAY_MS,
   LEVEL_TARGET_SCORES,
@@ -60,11 +61,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
   ...createRunStartState(),
   startGame: () => {
     trackPerformanceSync("game.startGame", () => {
+      const bridge = getGameEngineBridge();
+
+      if (bridge) {
+        bridge.startGame();
+        return;
+      }
+
       set(createRunStartState());
     });
   },
   startLevel: () => {
     trackPerformanceSync("game.startLevel", () => {
+      const bridge = getGameEngineBridge();
+
+      if (bridge) {
+        bridge.startLevel();
+        return;
+      }
+
       const state = get();
       let base: GameData = state;
 
@@ -92,6 +107,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
   continueAfterClear: () => {
     trackPerformanceSync("game.continueAfterClear", () => {
+      const bridge = getGameEngineBridge();
+
+      if (bridge) {
+        bridge.continueAfterClear();
+        return;
+      }
+
       const state = get();
 
       if (state.status !== "levelClear") {
@@ -116,16 +138,37 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
   resetGame: () => {
     trackPerformanceSync("game.resetGame", () => {
+      const bridge = getGameEngineBridge();
+
+      if (bridge) {
+        bridge.resetGame();
+        return;
+      }
+
       set(createRunStartState());
     });
   },
   resetRun: () => {
     trackPerformanceSync("game.resetRun", () => {
+      const bridge = getGameEngineBridge();
+
+      if (bridge) {
+        bridge.resetRun();
+        return;
+      }
+
       set(createRunStartState());
     });
   },
   togglePause: () => {
     trackPerformanceSync("game.togglePause", () => {
+      const bridge = getGameEngineBridge();
+
+      if (bridge) {
+        bridge.togglePause();
+        return;
+      }
+
       set((state) => {
         if (state.helpOpen) {
           return { ...state, helpOpen: false };
@@ -145,6 +188,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
   toggleHelp: () => {
     trackPerformanceSync("game.toggleHelp", () => {
+      const bridge = getGameEngineBridge();
+
+      if (bridge) {
+        bridge.toggleHelp();
+        return;
+      }
+
       set((state) => ({
         ...state,
         helpOpen: !state.helpOpen,
@@ -159,6 +209,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
     trackPerformanceSync(
       "game.tick",
       () => {
+        const bridge = getGameEngineBridge();
+
+        if (bridge) {
+          bridge.tick();
+          return;
+        }
+
         const state = get();
 
         if (state.status !== "playing") {
@@ -189,6 +246,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
   tickSkillCooldowns: () => {
     trackPerformanceSync("game.tickSkillCooldowns", () => {
+      const bridge = getGameEngineBridge();
+
+      if (bridge) {
+        bridge.tickSkillCooldowns();
+        return;
+      }
+
       const state = get();
 
       if (state.status !== "playing") {
@@ -203,6 +267,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
   moveLeft: () => {
     trackPerformanceSync("game.moveLeft", () => {
+      const bridge = getGameEngineBridge();
+
+      if (bridge) {
+        bridge.moveLeft();
+        return;
+      }
+
       const state = get();
 
       if (state.status !== "playing") {
@@ -214,6 +285,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
   moveRight: () => {
     trackPerformanceSync("game.moveRight", () => {
+      const bridge = getGameEngineBridge();
+
+      if (bridge) {
+        bridge.moveRight();
+        return;
+      }
+
       const state = get();
 
       if (state.status !== "playing") {
@@ -225,6 +303,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
   rotateClockwise: () => {
     trackPerformanceSync("game.rotateClockwise", () => {
+      const bridge = getGameEngineBridge();
+
+      if (bridge) {
+        bridge.rotateClockwise();
+        return;
+      }
+
       const state = get();
 
       if (state.status !== "playing") {
@@ -236,6 +321,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
   rotateCounterClockwise: () => {
     trackPerformanceSync("game.rotateCounterClockwise", () => {
+      const bridge = getGameEngineBridge();
+
+      if (bridge) {
+        bridge.rotateCounterClockwise();
+        return;
+      }
+
       const state = get();
 
       if (state.status !== "playing") {
@@ -247,6 +339,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
   softDrop: () => {
     trackPerformanceSync("game.softDrop", () => {
+      const bridge = getGameEngineBridge();
+
+      if (bridge) {
+        bridge.softDrop();
+        return;
+      }
+
       const state = get();
 
       if (state.status !== "playing") {
@@ -264,6 +363,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
   hardDrop: () => {
     trackPerformanceSync("game.hardDrop", () => {
+      const bridge = getGameEngineBridge();
+
+      if (bridge) {
+        bridge.hardDrop();
+        return;
+      }
+
       const state = get();
 
       if (state.status !== "playing") {
@@ -281,6 +387,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
   holdBlock: () => {
     trackPerformanceSync("game.holdBlock", () => {
+      const bridge = getGameEngineBridge();
+
+      if (bridge) {
+        bridge.holdBlock();
+        return;
+      }
+
       const state = get();
 
       if (state.status !== "playing") {
@@ -298,6 +411,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
   useSkill: (key) => {
     trackPerformanceSync(`game.useSkill.${key}`, () => {
+      const bridge = getGameEngineBridge();
+
+      if (bridge) {
+        bridge.useSkill(key);
+        return;
+      }
+
       const state = get();
 
       if (state.status !== "playing") {

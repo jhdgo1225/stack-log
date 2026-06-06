@@ -80,6 +80,7 @@ export type GameData = {
   skillUses: SkillUses;
   obstacleElapsedMs: number;
   obstacleWarningMs: number;
+  obstacleFallMs: number;
   obstaclePreviewBlocks: Point[][];
   helpOpen: boolean;
   failureBlocks: Point[];

@@ -9,7 +9,11 @@ export const MIN_SPEED_MS = 750;
 export const SPEED_STEP_MS = 75;
 export const SKILL_SCORE = 200;
 export const LEVEL_CLEAR_DELAY_MS = 5000;
-export const OBSTACLE_WARNING_MS = 1000;
+export const OBSTACLE_WARNING_MS = 3000;
+export const OBSTACLE_FALL_ROW_MS = 100;
+export const OBSTACLE_FALL_START_ROWS = VISIBLE_ROWS + 1;
+export const OBSTACLE_FALL_DURATION_MS =
+  OBSTACLE_FALL_START_ROWS * OBSTACLE_FALL_ROW_MS;
 
 export const LEVEL_TARGET_SCORES: Record<number, number | null> = {
   1: 10000,
