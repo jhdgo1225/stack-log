@@ -5,8 +5,8 @@ import {
   LEVEL_TARGET_SCORES,
   MIN_SPEED_MS,
   OBSTACLE_FALL_DURATION_MS,
-  OBSTACLE_WARNING_MS,
   OBSTACLE_RULES,
+  OBSTACLE_WARNING_MS,
   SKILL_SCORE,
   SPEED_STEP_MS,
   START_SPEED_MS,
@@ -243,6 +243,27 @@ const emptySkillUses = (): SkillUses => ({
 const randomInt = (maxExclusive: number, rng = Math.random) =>
   Math.floor(rng() * maxExclusive);
 
+export const getMayPassiveCooldownMs = (level: number) =>
+  Math.max(8000, 10000 - Math.max(0, level - 1) * 200);
+
+export const getMayActive1CooldownMs = (level: number) =>
+  Math.max(8000, 15000 - Math.max(0, level - 1) * 500);
+
+export const getMayActive1TargetCount = (level: number) =>
+  level >= 10 ? 3 : 1;
+
+export const getMayActive2CooldownMs = (level: number) =>
+  Math.max(10000, 30000 - Math.max(0, level - 1) * 1000);
+
+export const getMayActive3CooldownMs = (level: number) =>
+  Math.max(13000, 15000 - Math.max(0, level - 1) * 200);
+
+export const getMayActive3RequiredUses = (level: number) =>
+  level >= 10 ? 5 : level >= 5 ? 4 : 3;
+
+export const getMayActive3Depth = (level: number) =>
+  level >= 10 ? 4 : level >= 5 ? 3 : 2;
+
 export const createEmptyBoard = (
   width = BOARD_WIDTH,
   height = BOARD_HEIGHT,
@@ -452,6 +473,149 @@ export const clearFullRows = (board: Board) => {
     board: [...filledRows, ...remainingRows],
     clearedLines,
   };
+};
+
+const getActiveColumns = (active: ActiveBlock | null) =>
+  new Set((active ? getAbsoluteCells(active) : []).map((cell) => cell.x));
+
+export const meltBoardBlockAt = (state: GameData, target: Point) => {
+  if (state.board[target.y]?.[target.x] === EMPTY_CELL) {
+    return {
+      next: state,
+      target: null,
+    };
+  }
+
+  return meltBoardCellsAt(state, [target]);
+};
+
+export const meltBoardCellsAt = (state: GameData, targets: Point[]) => {
+  const targetKeys = new Set(
+    targets
+      .filter((target) => state.board[target.y]?.[target.x] !== EMPTY_CELL)
+      .map((target) => `${target.x}:${target.y}`),
+  );
+  const primaryTarget = targets.find((target) =>
+    targetKeys.has(`${target.x}:${target.y}`),
+  );
+
+  if (!primaryTarget) {
+    return {
+      next: state,
+      target: null,
+    };
+  }
+
+  const nextBoard = state.board.map((row) => row.slice());
+  const movedCells: Array<{ from: Point; to: Point; cell: Cell }> = [];
+  const affectedColumns = [...new Set(targets.map((target) => target.x))];
+
+  affectedColumns.forEach((x) => {
+    const aliveCells: Array<{ point: Point; cell: Cell }> = [];
+
+    for (let y = BOARD_HEIGHT - 1; y >= 0; y -= 1) {
+      const cell = state.board[y][x];
+
+      if (cell !== EMPTY_CELL && !targetKeys.has(`${x}:${y}`)) {
+        aliveCells.push({
+          point: { x, y },
+          cell,
+        });
+      }
+    }
+
+    for (let y = 0; y < BOARD_HEIGHT; y += 1) {
+      nextBoard[y][x] = EMPTY_CELL;
+    }
+
+    let writeY = BOARD_HEIGHT - 1;
+
+    for (const aliveCell of aliveCells) {
+      nextBoard[writeY][x] = aliveCell.cell;
+
+      if (aliveCell.point.y !== writeY) {
+        movedCells.push({
+          from: aliveCell.point,
+          to: { x, y: writeY },
+          cell: aliveCell.cell,
+        });
+      }
+
+      writeY -= 1;
+    }
+  });
+
+  return {
+    next: {
+      ...state,
+      board: nextBoard,
+    },
+    target: {
+      ...primaryTarget,
+      cell: state.board[primaryTarget.y][primaryTarget.x],
+      movedCells,
+    },
+  };
+};
+
+export const meltRandomBoardBlock = (state: GameData, rng = Math.random) => {
+  const activeColumns = getActiveColumns(state.active);
+  const candidates = state.board.flatMap((row, y) =>
+    row.flatMap((cell, x) =>
+      cell !== EMPTY_CELL && y >= HIDDEN_ROWS && !activeColumns.has(x)
+        ? [{ x, y }]
+        : [],
+    ),
+  );
+
+  if (candidates.length === 0) {
+    return {
+      next: state,
+      target: null,
+    };
+  }
+
+  const target = candidates[randomInt(candidates.length, rng)];
+  return meltBoardBlockAt(state, target);
+};
+
+const getMeltCandidateCells = (state: GameData) => {
+  const activeColumns = getActiveColumns(state.active);
+
+  return state.board.flatMap((row, y) =>
+    row.flatMap((cell, x) =>
+      cell !== EMPTY_CELL && y >= HIDDEN_ROWS && !activeColumns.has(x)
+        ? [{ x, y }]
+        : [],
+    ),
+  );
+};
+
+export const selectBestMayActive1Target = (state: GameData) => {
+  const candidates = getMeltCandidateCells(state);
+
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  return (
+    candidates
+      .map((candidate) => ({
+        point: candidate,
+        result: meltBoardBlockAt(state, candidate),
+      }))
+      .filter((candidate) => candidate.result.target !== null)
+      .sort((left, right) => {
+        const leftMoved = left.result.target?.movedCells.length ?? 0;
+        const rightMoved = right.result.target?.movedCells.length ?? 0;
+
+        return (
+          rightMoved - leftMoved ||
+          right.point.y - left.point.y ||
+          left.point.x - right.point.x
+        );
+      })[0]?.point ?? null
+  );
 };
 
 export const getScoreForLines = (clearedLines: number) => {
@@ -876,10 +1040,7 @@ const collectObstaclePreviewBlocks = (
   return previewBlocks;
 };
 
-const applyObstaclePlacements = (
-  state: GameData,
-  previewBlocks: Point[][],
-) => {
+const applyObstaclePlacements = (state: GameData, previewBlocks: Point[][]) => {
   let nextBoard = state.board;
   for (const cells of previewBlocks) {
     const settledCells = settleObstacleCells(nextBoard, cells);
