@@ -20,7 +20,6 @@ import { useFpsMonitor } from "@/shared/lib/performance/useFpsMonitor";
 import { useMeasuredHandler } from "@/shared/lib/performance/useMeasuredHandler";
 import { usePageTransitionTrace } from "@/shared/lib/performance/usePageTransitionTrace";
 import { usePerformanceTrace } from "@/shared/lib/performance/usePerformanceTrace";
-import { useKeyBindings } from "@/shared/lib/useKeyBindings";
 import { Button } from "@/shared/ui/Button";
 import { GameCanvas } from "@/widgets/gameCanvas/ui/GameCanvas";
 import "./game.css.ts";
@@ -307,13 +306,6 @@ export const GamePage = () => {
     failureBlocks,
     startLevel,
     resetRun,
-    moveLeft,
-    moveRight,
-    rotateClockwise,
-    rotateCounterClockwise,
-    softDrop,
-    hardDrop,
-    holdBlock,
     useSkill: activateSkill,
     togglePause,
     toggleHelp,
@@ -332,13 +324,6 @@ export const GamePage = () => {
       failureBlocks: state.failureBlocks,
       startLevel: state.startLevel,
       resetRun: state.resetRun,
-      moveLeft: state.moveLeft,
-      moveRight: state.moveRight,
-      rotateClockwise: state.rotateClockwise,
-      rotateCounterClockwise: state.rotateCounterClockwise,
-      softDrop: state.softDrop,
-      hardDrop: state.hardDrop,
-      holdBlock: state.holdBlock,
       useSkill: state.useSkill,
       togglePause: state.togglePause,
       toggleHelp: state.toggleHelp,
@@ -388,32 +373,6 @@ export const GamePage = () => {
 
     return () => window.clearTimeout(timeoutId);
   }, [status]);
-
-  useKeyBindings(
-    {
-      ArrowLeft: () => moveLeft(),
-      ArrowRight: () => moveRight(),
-      ArrowDown: () => softDrop(),
-      KeyS: () => softDrop(),
-      Space: () => hardDrop(),
-      KeyA: () => rotateCounterClockwise(),
-      KeyD: () => rotateClockwise(),
-      ShiftLeft: () => holdBlock(),
-      ShiftRight: () => holdBlock(),
-      KeyQ: () => activateSkill("Q"),
-      KeyW: () => activateSkill("W"),
-      KeyE: () => activateSkill("E"),
-      KeyR: () => activateSkill("R"),
-      Escape: () => togglePause(),
-      F1: () => toggleHelp(),
-      Enter: () => {
-        if (status === "levelIntro") {
-          startLevel();
-        }
-      },
-    },
-    true,
-  );
 
   const handleViewResults = useMeasuredHandler("ui.game.viewResults", () => {
     startPageTransition("game", "result");
