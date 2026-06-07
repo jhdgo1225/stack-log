@@ -799,3 +799,20 @@ export const emptyState = style({
   color: "#666",
   fontWeight: 800,
 });
+
+export const compactAllCharacterSymbol = style({
+  width: 22,
+  height: 22,
+  display: "grid",
+  placeItems: "center",
+  borderRadius: "50%",
+  background:
+    "radial-gradient(circle at 35% 28%, rgba(255,255,255,0.78), transparent 34%), var(--profile-accent-fill)",
+  color: "#fff",
+  fontSize: 8,
+  fontWeight: 900,
+  lineHeight: 1,
+  boxShadow: "0 0 0 2px rgba(255,255,255,0.65)",
+  pointerEvents: "none",
+  userSelect: "none",
+});

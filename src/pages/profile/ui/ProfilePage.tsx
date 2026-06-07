@@ -193,7 +193,7 @@ export function ProfilePage() {
   const [nickname, setNickname] = useState(getStoredNickname);
   const [draftNickname, setDraftNickname] = useState(nickname);
   const [isEditingNickname, setIsEditingNickname] = useState(false);
-  const [selectedFilter, setSelectedFilter] = useState<CharacterFilter>("may");
+  const [selectedFilter, setSelectedFilter] = useState<CharacterFilter>("all");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -221,7 +221,7 @@ export function ProfilePage() {
 
   const selectedOption =
     characterOptions.find((option) => option.id === selectedFilter) ??
-    characterOptions[1] ??
+    characterOptions[0] ??
     ALL_CHARACTER;
   const isCommonTheme = selectedFilter === "all";
   const accentColor = selectedOption.color;
@@ -286,10 +286,7 @@ export function ProfilePage() {
     (best, record) => Math.max(best, record.skillUses.R),
     0,
   );
-  const skillDisplayCharacter =
-    selectedFilter === "all"
-      ? mostPlayedCharacter
-      : getCharacter(selectedFilter);
+
   const totalSkillUses = SKILL_KEYS.reduce(
     (totals, key) => ({
       ...totals,
@@ -434,17 +431,21 @@ export function ProfilePage() {
                 type="button"
                 className={styles.selectedCharacterButton}
                 onClick={() => setIsModalOpen(true)}>
-                <img
-                  className={styles.compactCharacterSymbol}
-                  src={getCharacterSymbolSrc(
-                    selectedOption.id === "all"
-                      ? mostPlayedCharacter.id
-                      : selectedOption.id,
-                  )}
-                  alt=""
-                  aria-hidden="true"
-                  draggable={false}
-                />
+                {selectedOption.id === "all" ? (
+                  <span
+                    className={styles.compactAllCharacterSymbol}
+                    aria-hidden="true">
+                    ALL
+                  </span>
+                ) : (
+                  <img
+                    className={styles.compactCharacterSymbol}
+                    src={getCharacterSymbolSrc(selectedOption.id)}
+                    alt=""
+                    aria-hidden="true"
+                    draggable={false}
+                  />
+                )}
                 {selectedOption.name}
               </button>
             </div>
@@ -484,40 +485,52 @@ export function ProfilePage() {
               <div className={styles.skillRow}>
                 <span className={styles.statLabel}>
                   스킬 사용 횟수
-                  <p className={styles.skillHelp}>
-                    {`스킬 이미지에 마우스 커서를\n올려서 확인하세요`}
-                  </p>
+                  {!isCommonTheme && (
+                    <p className={styles.skillHelp}>
+                      {`스킬 이미지에 마우스 커서를\n올려서 확인하세요`}
+                    </p>
+                  )}
                 </span>
-                <div className={styles.skillSlots}>
-                  {SKILL_KEYS.map((skillKey, index) => {
-                    const skill =
-                      skillDisplayCharacter.skills[index + 1] ??
-                      skillDisplayCharacter.skills[0];
 
-                    return (
-                      <button
-                        type="button"
-                        key={skillKey}
-                        className={styles.skillButton}
-                        aria-label={`${skillKey} 스킬 사용 횟수 ${totalSkillUses[skillKey]}회`}>
-                        <img
-                          className={styles.skillIconImage}
-                          src={getCharacterSkillSrc(
-                            skillDisplayCharacter.id,
-                            skill.type,
-                          )}
-                          alt=""
-                          aria-hidden="true"
-                          draggable={false}
-                        />
-                        <span>{skillKey}</span>
-                        <span className={styles.tooltip}>
-                          {skillKey}: {totalSkillUses[skillKey]}회
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                {isCommonTheme ? (
+                  <strong className={styles.statValue}>
+                    Q {totalSkillUses.Q}회 / W {totalSkillUses.W}회 / E{" "}
+                    {totalSkillUses.E}회 / R {totalSkillUses.R}회
+                  </strong>
+                ) : (
+                  <div className={styles.skillSlots}>
+                    {SKILL_KEYS.map((skillKey, index) => {
+                      const skillDisplayCharacter =
+                        getCharacter(selectedFilter);
+                      const skill =
+                        skillDisplayCharacter.skills[index + 1] ??
+                        skillDisplayCharacter.skills[0];
+
+                      return (
+                        <button
+                          type="button"
+                          key={skillKey}
+                          className={styles.skillButton}
+                          aria-label={`${skillKey} 스킬 사용 횟수 ${totalSkillUses[skillKey]}회`}>
+                          <img
+                            className={styles.skillIconImage}
+                            src={getCharacterSkillSrc(
+                              skillDisplayCharacter.id,
+                              skill.type,
+                            )}
+                            alt=""
+                            aria-hidden="true"
+                            draggable={false}
+                          />
+                          <span>{skillKey}</span>
+                          <span className={styles.tooltip}>
+                            {skillKey}: {totalSkillUses[skillKey]}회
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           </article>
