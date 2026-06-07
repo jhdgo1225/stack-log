@@ -51,76 +51,40 @@ const ALL_CHARACTER: CharacterOption = {
 };
 
 const SAMPLE_RECORDS: GameRecord[] = [
-  createSampleRecord("may", 20, 1000000, "2026-07-08T14:23:23", 1223000, {
-    Q: 100,
-    W: 82,
-    E: 70,
-    R: 4,
+  createSampleRecord("bron", 7, 14200, "2026-06-04T14:20:15", 340000, {
+    Q: 7,
+    W: 5,
+    E: 6,
+    R: 3,
   }),
-  createSampleRecord("may", 6, 90000, "2026-07-05T02:24:40", 265000, {
-    Q: 100,
-    W: 82,
-    E: 70,
-    R: 4,
+  createSampleRecord("bron", 7, 14000, "2026-06-03T21:23:40", 339000, {
+    Q: 7,
+    W: 5,
+    E: 6,
+    R: 3,
   }),
-  createSampleRecord("may", 7, 102300, "2026-07-07T20:20:23", 340000, {
-    Q: 100,
-    W: 82,
-    E: 70,
-    R: 4,
+  createSampleRecord("aria", 7, 13900, "2026-06-03T14:23:40", 340000, {
+    Q: 7,
+    W: 5,
+    E: 6,
+    R: 3,
   }),
-  createSampleRecord("may", 7, 102300, "2026-07-05T00:00:02", 338000, {
-    Q: 100,
-    W: 82,
-    E: 70,
-    R: 4,
+  createSampleRecord("aria", 7, 13600, "2026-06-02T15:30:50", 341000, {
+    Q: 7,
+    W: 5,
+    E: 6,
+    R: 3,
   }),
-  createSampleRecord("may", 7, 104300, "2026-07-07T18:00:23", 359000, {
-    Q: 100,
-    W: 82,
-    E: 70,
-    R: 4,
+  createSampleRecord("bron", 8, 15100, "2026-06-01T11:45:10", 363000, {
+    Q: 7,
+    W: 5,
+    E: 6,
+    R: 3,
   }),
-  createSampleRecord("may", 7, 102300, "2026-07-04T20:20:40", 330000, {
-    Q: 100,
-    W: 82,
-    E: 70,
-    R: 4,
-  }),
-  createSampleRecord("may", 7, 102300, "2026-07-07T14:20:15", 340000, {
-    Q: 100,
-    W: 82,
-    E: 70,
-    R: 4,
-  }),
-  createSampleRecord("may", 7, 102300, "2026-07-03T21:23:40", 339000, {
-    Q: 100,
-    W: 82,
-    E: 70,
-    R: 4,
-  }),
-  createSampleRecord("may", 7, 102300, "2026-07-06T14:23:40", 340000, {
-    Q: 100,
-    W: 82,
-    E: 70,
-    R: 4,
-  }),
-  createSampleRecord("may", 7, 102300, "2026-07-02T15:30:50", 341000, {
-    Q: 100,
-    W: 82,
-    E: 70,
-    R: 4,
-  }),
-  createSampleRecord("bron", 8, 122000, "2026-07-01T11:45:10", 363000, {
-    Q: 91,
-    W: 76,
-    E: 64,
-    R: 5,
-  }),
-  createSampleRecord("aria", 5, 76000, "2026-06-30T19:12:00", 248000, {
-    Q: 68,
-    W: 55,
-    E: 42,
+  createSampleRecord("aria", 5, 9000, "2026-06-01T19:12:00", 248000, {
+    Q: 5,
+    W: 10,
+    E: 8,
     R: 2,
   }),
 ];
