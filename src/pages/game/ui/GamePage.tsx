@@ -11,7 +11,12 @@ import {
   useCharacterStore,
 } from "@/entities/character";
 import type { BagSlot, BlockDefinition, SkillKey } from "@/entities/game";
-import { BOARD_WIDTH, HIDDEN_ROWS, useGameStore } from "@/entities/game";
+import {
+  BOARD_WIDTH,
+  getMayPassiveCooldownMs,
+  HIDDEN_ROWS,
+  useGameStore,
+} from "@/entities/game";
 import { useGameRecordStore } from "@/entities/gameRecord";
 import { useScoreStore } from "@/entities/score";
 import { APP_ROUTES } from "@/shared/config/routes";
@@ -324,6 +329,7 @@ export const GamePage = () => {
     combo,
     skillCooldowns,
     skillCooldownMax,
+    mayPassiveCooldownRemainingMs,
     mayPrimedQDepth,
     mayUltimateRemainingMs,
     mayUltimateCastNonce,
@@ -346,6 +352,7 @@ export const GamePage = () => {
       combo: state.combo,
       skillCooldowns: state.skillCooldowns,
       skillCooldownMax: state.skillCooldownMax,
+      mayPassiveCooldownRemainingMs: state.mayPassiveCooldownRemainingMs,
       mayPrimedQDepth: state.mayPrimedQDepth,
       mayUltimateRemainingMs: state.mayUltimateRemainingMs,
       mayUltimateCastNonce: state.mayUltimateCastNonce,
@@ -493,14 +500,29 @@ export const GamePage = () => {
   });
 
   const isUltimateActive = mayUltimateRemainingMs > 0;
+  const isMayCharacter = selectedCharacter.id === "may";
+  const mayPassiveCooldownView =
+    isMayCharacter && mayPassiveCooldownRemainingMs > 0
+      ? {
+          remainingSeconds: Math.max(
+            1,
+            Math.ceil(mayPassiveCooldownRemainingMs / 1000),
+          ),
+          progress: Math.max(
+            0,
+            Math.min(
+              1,
+              1 -
+                mayPassiveCooldownRemainingMs / getMayPassiveCooldownMs(level),
+            ),
+          ),
+        }
+      : null;
   const ultimateRemainingSeconds = isUltimateActive
     ? Math.max(1, Math.ceil(mayUltimateRemainingMs / 1000))
     : undefined;
   const ultimateProgress = isUltimateActive
-    ? Math.max(
-        0,
-        Math.min(1, 1 - mayUltimateRemainingMs / 15000),
-      )
+    ? Math.max(0, Math.min(1, 1 - mayUltimateRemainingMs / 15000))
     : undefined;
 
   const skillSlotItems = selectedCharacter.skills.map((skill, index) => {
@@ -511,9 +533,7 @@ export const GamePage = () => {
       activeKey === "Q" &&
       mayPrimedQDepth !== null;
     const isUltimateSkillActive =
-      selectedCharacter.id === "may" &&
-      activeKey === "R" &&
-      isUltimateActive;
+      selectedCharacter.id === "may" && activeKey === "R" && isUltimateActive;
     const cooldownView = !isPassive
       ? skillCooldownViews.find((item) => item?.key === activeKey)
       : null;
@@ -524,12 +544,18 @@ export const GamePage = () => {
         alt=""
         label={skillLabels[index] ?? skill.type}
         cooldownSeconds={
-          isUltimateSkillActive
-            ? ultimateRemainingSeconds
-            : cooldownView?.remainingSeconds
+          isPassive
+            ? mayPassiveCooldownView?.remainingSeconds
+            : isUltimateSkillActive
+              ? ultimateRemainingSeconds
+              : cooldownView?.remainingSeconds
         }
         cooldownProgress={
-          isUltimateSkillActive ? ultimateProgress : cooldownView?.progress
+          isPassive
+            ? mayPassiveCooldownView?.progress
+            : isUltimateSkillActive
+              ? ultimateProgress
+              : cooldownView?.progress
         }
         primedLabel={isPrimedQ ? `↓+${mayPrimedQDepth}` : undefined}
         timerTone={isUltimateSkillActive ? "ultimate" : "cooldown"}
@@ -541,7 +567,7 @@ export const GamePage = () => {
         <div
           key={skill.id}
           className="skill-slot skill-slot--passive"
-          data-ready="true"
+          data-ready={mayPassiveCooldownRemainingMs <= 0}
         >
           {sharedContent}
         </div>

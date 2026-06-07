@@ -617,12 +617,9 @@ globalStyle(".skill-passive-note", {
   lineHeight: 1,
 });
 
-globalStyle(
-  ".skill-slot--passive .skill-cooldown, .skill-slot--passive .skill-icon-timer",
-  {
-    display: "none",
-  },
-);
+globalStyle(".skill-slot--passive .skill-cooldown", {
+  display: "none",
+});
 
 globalStyle(".skill-slot--passive .skill-key", {
   color: ink,
