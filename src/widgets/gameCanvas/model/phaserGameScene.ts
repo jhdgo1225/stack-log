@@ -1136,6 +1136,28 @@ export class GameScene extends Phaser.Scene {
     this.ultimateEffectContainer.setDepth(18);
     this.passiveEffectContainer.setDepth(20);
 
+    this.input.keyboard?.on("keydown-LEFT", () => this.engine.moveLeft());
+    this.input.keyboard?.on("keydown-RIGHT", () => this.engine.moveRight());
+    this.input.keyboard?.on("keydown-DOWN", () => this.engine.softDrop());
+    this.input.keyboard?.on("keydown-S", () => this.engine.softDrop());
+    this.input.keyboard?.on("keydown-SPACE", () => this.engine.hardDrop());
+    this.input.keyboard?.on("keydown-A", () =>
+      this.engine.rotateCounterClockwise(),
+    );
+    this.input.keyboard?.on("keydown-D", () => this.engine.rotateClockwise());
+    this.input.keyboard?.on("keydown-SHIFT", () => this.engine.holdBlock());
+    this.input.keyboard?.on("keydown-Q", () => this.engine.useSkill("Q"));
+    this.input.keyboard?.on("keydown-W", () => this.engine.useSkill("W"));
+    this.input.keyboard?.on("keydown-E", () => this.engine.useSkill("E"));
+    this.input.keyboard?.on("keydown-R", () => this.engine.useSkill("R"));
+    this.input.keyboard?.on("keydown-ESC", () => this.engine.togglePause());
+    this.input.keyboard?.on("keydown-F1", () => this.engine.toggleHelp());
+    this.input.keyboard?.on("keydown-ENTER", () => {
+      if (this.engine.snapshot.status === "levelIntro") {
+        this.engine.startLevel();
+      }
+    });
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       setGameEngineBridge(null);
     });
