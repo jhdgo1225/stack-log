@@ -7,7 +7,6 @@ import {
   OBSTACLE_FALL_DURATION_MS,
   OBSTACLE_RULES,
   OBSTACLE_WARNING_MS,
-  SKILL_SCORE,
   SPEED_STEP_MS,
   START_SPEED_MS,
 } from "./constants";
@@ -21,6 +20,7 @@ import type {
   GameData,
   GameStatus,
   Point,
+  SkillCooldownMax,
   SkillCooldowns,
   SkillKey,
   SkillUses,
@@ -233,6 +233,13 @@ const emptyCooldowns = (): SkillCooldowns => ({
   R: 0,
 });
 
+export const emptyCooldownMax = (): SkillCooldownMax => ({
+  Q: 0,
+  W: 0,
+  E: 0,
+  R: 0,
+});
+
 const emptySkillUses = (): SkillUses => ({
   Q: 0,
   W: 0,
@@ -256,7 +263,7 @@ export const getMayActive2CooldownMs = (level: number) =>
   Math.max(10000, 30000 - Math.max(0, level - 1) * 1000);
 
 export const getMayActive3CooldownMs = (level: number) =>
-  Math.max(13000, 15000 - Math.max(0, level - 1) * 200);
+  Math.max(16000, 22000 - Math.max(0, level - 1) * 600);
 
 export const getMayActive3RequiredUses = (level: number) =>
   level >= 10 ? 5 : level >= 5 ? 4 : 3;
@@ -324,6 +331,10 @@ export const createInitialGameData = (
   maxCombo: 0,
   targetScore: LEVEL_TARGET_SCORES[level] ?? null,
   skillCooldowns: emptyCooldowns(),
+  skillCooldownMax: emptyCooldownMax(),
+  mayPrimedQDepth: null,
+  mayUltimateRemainingMs: 0,
+  mayUltimateCastNonce: 0,
   skillUses,
   obstacleElapsedMs: 0,
   obstacleWarningMs: 0,
@@ -591,7 +602,10 @@ const getMeltCandidateCells = (state: GameData) => {
   );
 };
 
-export const selectBestMayActive1Target = (state: GameData) => {
+export const selectBestMayActive1Target = (
+  state: GameData,
+  excludedKeys: ReadonlySet<string> = new Set<string>(),
+) => {
   const candidates = getMeltCandidateCells(state);
 
   if (candidates.length === 0) {
@@ -604,7 +618,11 @@ export const selectBestMayActive1Target = (state: GameData) => {
         point: candidate,
         result: meltBoardBlockAt(state, candidate),
       }))
-      .filter((candidate) => candidate.result.target !== null)
+      .filter(
+        (candidate) =>
+          candidate.result.target !== null &&
+          !excludedKeys.has(`${candidate.point.x}:${candidate.point.y}`),
+      )
       .sort((left, right) => {
         const leftMoved = left.result.target?.movedCells.length ?? 0;
         const rightMoved = right.result.target?.movedCells.length ?? 0;
@@ -880,12 +898,17 @@ export const useSkill = (state: GameData, key: SkillKey) => {
     return state;
   }
 
+  const cooldownMs = SKILL_COOLDOWN_MS[key];
+
   return {
     ...state,
-    score: state.score + SKILL_SCORE,
     skillCooldowns: {
       ...state.skillCooldowns,
-      [key]: SKILL_COOLDOWN_MS[key],
+      [key]: cooldownMs,
+    },
+    skillCooldownMax: {
+      ...state.skillCooldownMax,
+      [key]: cooldownMs,
     },
     skillUses: {
       ...state.skillUses,
@@ -893,6 +916,19 @@ export const useSkill = (state: GameData, key: SkillKey) => {
     },
   };
 };
+
+export const getSkillBlockScore = (removedCount: number) =>
+  Math.max(0, removedCount) * 100;
+
+export const reduceSkillCooldownMax = (
+  cooldowns: SkillCooldowns,
+  cooldownMax: SkillCooldownMax,
+): SkillCooldownMax => ({
+  Q: cooldowns.Q > 0 ? cooldownMax.Q : 0,
+  W: cooldowns.W > 0 ? cooldownMax.W : 0,
+  E: cooldowns.E > 0 ? cooldownMax.E : 0,
+  R: cooldowns.R > 0 ? cooldownMax.R : 0,
+});
 
 export const reduceSkillCooldowns = (
   cooldowns: SkillCooldowns,
@@ -1059,23 +1095,22 @@ const applyObstaclePlacements = (state: GameData, previewBlocks: Point[][]) => {
     }
 
     nextBoard = mergeCells(nextBoard, settledCells, OBSTACLE_CELL);
-
-    if (hasHiddenBlocks(nextBoard)) {
-      return {
-        next: {
-          ...state,
-          board: nextBoard,
-          failureBlocks: getFailureBlocks(nextBoard),
-          obstacleFallMs: 0,
-          obstaclePreviewBlocks: [],
-        },
-        status: "failed" as GameStatus,
-      };
-    }
   }
 
   const { board: clearedBoard, clearedLines } = clearFullRows(nextBoard);
   const scored = applyLineScore(state, clearedBoard, clearedLines);
+
+  if (hasHiddenBlocks(scored.board)) {
+    return {
+      next: {
+        ...scored,
+        failureBlocks: getFailureBlocks(scored.board),
+        obstacleFallMs: 0,
+        obstaclePreviewBlocks: [],
+      },
+      status: "failed" as GameStatus,
+    };
+  }
 
   return {
     next: {
