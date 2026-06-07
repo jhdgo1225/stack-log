@@ -646,7 +646,7 @@ export function ProfilePage() {
         onClose={() => setIsModalOpen(false)}
         searchValue={search}
         onSearchChange={setSearch}
-        searchPlaceholder="에밀리"
+        searchPlaceholder="캐릭터 이름"
         hasResults={modalOptions.length > 0}
         style={
           {
