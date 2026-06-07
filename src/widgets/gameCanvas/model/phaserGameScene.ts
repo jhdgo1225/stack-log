@@ -27,6 +27,7 @@ import {
   getMayActive3CooldownMs,
   getMayActive3Depth,
   getMayPassiveCooldownMs,
+  getMeltCandidateCells,
   getSkillBlockScore,
   getSpeedMs,
   hardDrop as applyHardDrop,
@@ -127,6 +128,7 @@ const createSnapshot = (): GameRuntimeSnapshot => {
     targetScore: state.targetScore,
     skillCooldowns: state.skillCooldowns,
     skillCooldownMax: state.skillCooldownMax,
+    mayPassiveCooldownRemainingMs: state.mayPassiveCooldownRemainingMs,
     mayPrimedQDepth: state.mayPrimedQDepth,
     mayUltimateRemainingMs: state.mayUltimateRemainingMs,
     mayUltimateCastNonce: state.mayUltimateCastNonce,
@@ -197,10 +199,7 @@ class PhaserGameEngine {
     return this.mayActive1Targets.filter((target) => {
       const key = this.getPointKey(target);
 
-      return (
-        !this.mayActive2ConsumedKeys.has(key) &&
-        target.y >= HIDDEN_ROWS
-      );
+      return !this.mayActive2ConsumedKeys.has(key) && target.y >= HIDDEN_ROWS;
     });
   }
 
@@ -355,6 +354,10 @@ class PhaserGameEngine {
 
     this.setState({
       ...spawned.next,
+      mayPassiveCooldownRemainingMs:
+        !spawned.failed && getCurrentCharacter().id === "may"
+          ? getMayPassiveCooldownMs(spawned.next.level)
+          : 0,
       status: spawned.failed ? "failed" : "playing",
       speedMs: getSpeedMs(spawned.next.level),
       clearDelayMs: 0,
@@ -600,7 +603,9 @@ class PhaserGameEngine {
       return;
     }
 
-    const consumedKeys = new Set(targets.map((target) => this.getPointKey(target)));
+    const consumedKeys = new Set(
+      targets.map((target) => this.getPointKey(target)),
+    );
 
     targets.forEach((target) => {
       this.mayActive2ConsumedKeys.add(this.getPointKey(target));
@@ -659,9 +664,7 @@ class PhaserGameEngine {
       x: target.x,
       y: target.y - index,
     })).filter(
-      (cell) =>
-        cell.y >= 0 &&
-        this.state.board[cell.y]?.[cell.x] !== 0,
+      (cell) => cell.y >= 0 && this.state.board[cell.y]?.[cell.x] !== 0,
     );
   }
 
@@ -674,22 +677,23 @@ class PhaserGameEngine {
       return;
     }
 
-    this.mayPassiveAccumulatorMs += deltaMs;
     const cooldownMs = getMayPassiveCooldownMs(this.state.level);
+    const hasPassiveTarget = this.hasMayPassiveTarget();
+
+    if (!hasPassiveTarget) {
+      this.syncMayPassiveCooldownState(cooldownMs);
+      return;
+    }
+
+    this.mayPassiveAccumulatorMs += deltaMs;
+    this.syncMayPassiveCooldownState(cooldownMs);
 
     if (this.mayPassiveAccumulatorMs < cooldownMs) {
       return;
     }
 
-    if (
-      this.state.obstacleWarningMs > 0 ||
-      this.state.obstacleFallMs > 0 ||
-      this.state.obstaclePreviewBlocks.length > 0
-    ) {
-      return;
-    }
-
     this.mayPassiveAccumulatorMs -= cooldownMs;
+    this.syncMayPassiveCooldownState(cooldownMs);
     const result = meltRandomBoardBlock(this.state);
 
     if (!result.target) {
@@ -723,6 +727,25 @@ class PhaserGameEngine {
         this.isMayMeltRunning = false;
       },
     );
+  }
+
+  private hasMayPassiveTarget() {
+    return getMeltCandidateCells(this.state).length > 0;
+  }
+
+  private syncMayPassiveCooldownState(cooldownMs: number) {
+    const remainingMs = Math.max(0, cooldownMs - this.mayPassiveAccumulatorMs);
+    const roundedRemainingMs =
+      remainingMs > 0 ? Math.ceil(remainingMs / 100) * 100 : 0;
+
+    if (roundedRemainingMs === this.state.mayPassiveCooldownRemainingMs) {
+      return;
+    }
+
+    this.setState({
+      ...this.state,
+      mayPassiveCooldownRemainingMs: roundedRemainingMs,
+    });
   }
 
   private useMayActive1() {
@@ -1367,7 +1390,12 @@ export class GameScene extends Phaser.Scene {
       });
     }
 
-    this.renderMayUltimateAura(boardPanelX, boardPanelY, boardPanelWidth, boardPanelHeight);
+    this.renderMayUltimateAura(
+      boardPanelX,
+      boardPanelY,
+      boardPanelWidth,
+      boardPanelHeight,
+    );
     this.drawMayActive2Indicators();
     this.drawFallingOverlaySprites();
 
@@ -1530,7 +1558,10 @@ export class GameScene extends Phaser.Scene {
     const dotAlpha = 0.48 + pulse * 0.12;
 
     targets.forEach((target) => {
-      const { x, y, cellSize } = this.getVisibleCellPosition(target.x, target.y);
+      const { x, y, cellSize } = this.getVisibleCellPosition(
+        target.x,
+        target.y,
+      );
       const inset = Math.max(1.8, cellSize * 0.1);
       const innerInset = Math.max(3.5, cellSize * 0.17);
       const dotRadius = Math.max(3, cellSize * 0.095);
@@ -1670,11 +1701,7 @@ export class GameScene extends Phaser.Scene {
       boardPanelHeight - inset * 2,
       uiPx(14),
     );
-    this.ultimateAuraGraphics.lineStyle(
-      uiPx(2),
-      0xffeff9,
-      borderAlpha,
-    );
+    this.ultimateAuraGraphics.lineStyle(uiPx(2), 0xffeff9, borderAlpha);
     this.ultimateAuraGraphics.strokeRoundedRect(
       boardPanelX - uiPx(1),
       boardPanelY - uiPx(1),
@@ -1717,12 +1744,7 @@ export class GameScene extends Phaser.Scene {
           uiPx(16),
         );
         flare.fillStyle(0xff9ad3, 0.12 * (1 - progress * 0.6));
-        flare.fillEllipse(
-          centerX,
-          centerY,
-          ringWidth * 0.9,
-          ringHeight * 0.9,
-        );
+        flare.fillEllipse(centerX, centerY, ringWidth * 0.9, ringHeight * 0.9);
 
         ring.clear();
         ring.lineStyle(uiPx(5), 0xfffbff, 0.68 * (1 - progress));
@@ -1744,7 +1766,8 @@ export class GameScene extends Phaser.Scene {
     for (let index = 0; index < 18; index += 1) {
       const sparkle = this.add.circle(
         centerX + randomRange(-boardPanelWidth * 0.22, boardPanelWidth * 0.22),
-        centerY + randomRange(-boardPanelHeight * 0.16, boardPanelHeight * 0.16),
+        centerY +
+          randomRange(-boardPanelHeight * 0.16, boardPanelHeight * 0.16),
         randomRange(uiPx(2), uiPx(5)),
         0xffeff9,
         0.8,
@@ -1753,8 +1776,12 @@ export class GameScene extends Phaser.Scene {
       this.ultimateEffectContainer.add(sparkle);
       this.tweens.add({
         targets: sparkle,
-        x: sparkle.x + randomRange(-boardPanelWidth * 0.18, boardPanelWidth * 0.18),
-        y: sparkle.y + randomRange(-boardPanelHeight * 0.28, boardPanelHeight * 0.28),
+        x:
+          sparkle.x +
+          randomRange(-boardPanelWidth * 0.18, boardPanelWidth * 0.18),
+        y:
+          sparkle.y +
+          randomRange(-boardPanelHeight * 0.28, boardPanelHeight * 0.28),
         alpha: 0,
         scale: randomRange(1.2, 1.8),
         duration: randomRange(520, 980),

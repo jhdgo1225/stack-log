@@ -332,6 +332,7 @@ export const createInitialGameData = (
   targetScore: LEVEL_TARGET_SCORES[level] ?? null,
   skillCooldowns: emptyCooldowns(),
   skillCooldownMax: emptyCooldownMax(),
+  mayPassiveCooldownRemainingMs: 0,
   mayPrimedQDepth: null,
   mayUltimateRemainingMs: 0,
   mayUltimateCastNonce: 0,
@@ -570,14 +571,7 @@ export const meltBoardCellsAt = (state: GameData, targets: Point[]) => {
 };
 
 export const meltRandomBoardBlock = (state: GameData, rng = Math.random) => {
-  const activeColumns = getActiveColumns(state.active);
-  const candidates = state.board.flatMap((row, y) =>
-    row.flatMap((cell, x) =>
-      cell !== EMPTY_CELL && y >= HIDDEN_ROWS && !activeColumns.has(x)
-        ? [{ x, y }]
-        : [],
-    ),
-  );
+  const candidates = getMeltCandidateCells(state);
 
   if (candidates.length === 0) {
     return {
@@ -590,7 +584,7 @@ export const meltRandomBoardBlock = (state: GameData, rng = Math.random) => {
   return meltBoardBlockAt(state, target);
 };
 
-const getMeltCandidateCells = (state: GameData) => {
+export const getMeltCandidateCells = (state: GameData) => {
   const activeColumns = getActiveColumns(state.active);
 
   return state.board.flatMap((row, y) =>
