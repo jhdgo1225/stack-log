@@ -11,6 +11,8 @@ export {
 } from "./model/constants";
 export {
   canPlaceCells,
+  getMayPassiveCooldownMs,
+  getMeltCandidateCells,
   getAbsoluteCells,
   getMiniBoard,
   getRenderBoard,

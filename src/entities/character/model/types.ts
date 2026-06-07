@@ -18,9 +18,16 @@ export type CharacterSkill = {
   description: string;
   detailLines: string[];
   cooldowns: CharacterSkillCooldown[];
+  video?: CharacterSkillVideo;
 };
 
 export type CharacterSkillCooldown = {
   level: string;
   value: string;
+};
+
+export type CharacterSkillVideo = {
+  src?: string;
+  posterSrc?: string;
+  description?: string;
 };
