@@ -11,6 +11,8 @@ export {
 } from "./model/constants";
 export {
   canPlaceCells,
+  getMayPassiveCooldownMs,
+  getMeltCandidateCells,
   getAbsoluteCells,
   getMiniBoard,
   getRenderBoard,
@@ -23,6 +25,7 @@ export type {
   Board,
   GameStatus,
   Point,
+  SkillCooldownMax,
   SkillCooldowns,
   SkillKey,
   SkillUses,

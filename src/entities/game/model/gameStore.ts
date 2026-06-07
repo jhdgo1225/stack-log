@@ -14,6 +14,7 @@ import {
   hardDrop as applyHardDrop,
   holdBlock as applyHoldBlock,
   moveHorizontal,
+  reduceSkillCooldownMax,
   reduceSkillCooldowns,
   rotateActiveBlock,
   spawnNextBlock,
@@ -22,6 +23,8 @@ import {
   useSkill as applySkill,
 } from "./gameLogic";
 import type { GameData, GameStatus, SkillKey } from "./types";
+
+const COOLDOWN_TICK_MS = 250;
 
 type GameStore = GameData & {
   status: GameStatus;
@@ -259,9 +262,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
         return;
       }
 
+      const nextSkillCooldowns = reduceSkillCooldowns(
+        state.skillCooldowns,
+        COOLDOWN_TICK_MS,
+      );
+
       set({
         ...state,
-        skillCooldowns: reduceSkillCooldowns(state.skillCooldowns, 1000),
+        skillCooldowns: nextSkillCooldowns,
+        skillCooldownMax: reduceSkillCooldownMax(
+          nextSkillCooldowns,
+          state.skillCooldownMax,
+        ),
       });
     });
   },

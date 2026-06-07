@@ -1,4 +1,4 @@
-import { getCharacterImageSrc } from "./assets";
+import { getCharacterImageSrc, getCharacterSkillSrc } from "./assets";
 import type { CharacterSkillCooldown } from "./types";
 import type { Character } from "./types";
 
@@ -36,6 +36,11 @@ function createMilestoneCooldowns(
 }
 
 const mayCooldowns = createLinearCooldowns(10, 8);
+const skillVideoBase = "/assets/skill-videos";
+
+function getMaySkillVideo(slug: string) {
+  return `${skillVideoBase}/may-skill-${slug}-video.mov`;
+}
 
 export const CHARACTER_LIST: Character[] = [
   {
@@ -61,6 +66,10 @@ export const CHARACTER_LIST: Character[] = [
           "블록을 랜덤으로 녹입니다. 녹은 블록의 자리에 위에 쌓여 있던 블록들이 내려옵니다.",
         detailLines: [],
         cooldowns: mayCooldowns,
+        video: {
+          src: getMaySkillVideo("passive"),
+          posterSrc: getCharacterSkillSrc("may", "패시브"),
+        },
       },
       {
         id: "may-precise-dissolve",
@@ -70,6 +79,10 @@ export const CHARACTER_LIST: Character[] = [
           "목표 맵 위 유리하게 플레이할 수 있는 블록 위치를 자동으로 선택합니다.",
         detailLines: ["추가 효과: 레벨 10부터 블록 위치 3개 선정"],
         cooldowns: createLinearCooldowns(15, 8),
+        video: {
+          src: getMaySkillVideo("active1"),
+          posterSrc: getCharacterSkillSrc("may", "액티브 1"),
+        },
       },
       {
         id: "may-residual-dissolve",
@@ -80,28 +93,40 @@ export const CHARACTER_LIST: Character[] = [
         detailLines: [
           "제한: 액티브 2 스킬 이후 본 스킬로 그 위치를 다시 녹일 수 없음",
         ],
-        cooldowns: createLinearCooldowns(30, 10),
+        cooldowns: createLinearCooldowns(30, 20),
+        video: {
+          src: getMaySkillVideo("active2"),
+          posterSrc: getCharacterSkillSrc("may", "액티브 2"),
+        },
       },
       {
         id: "may-deep-dissolve",
         type: "액티브 3",
         name: "심층 용해",
         description:
-          "사용 시 다음 액티브 1 스킬의 용해 범위를 아래 2칸까지 확장합니다.",
+          "사용 시 다음 액티브 1 스킬의 용해 범위를 아래 2칸까지 확장합니다. 준비 시간이 더 긴 대신 더 깊게 녹일 수 있습니다.",
         detailLines: ["레벨 5: 아래 3칸", "레벨 10: 아래 4칸"],
-        cooldowns: createLinearCooldowns(15, 13),
+        cooldowns: createLinearCooldowns(30, 15),
+        video: {
+          src: getMaySkillVideo("active3"),
+          posterSrc: getCharacterSkillSrc("may", "액티브 3"),
+        },
       },
       {
         id: "may-dissolve-accel",
         type: "필살기",
         name: "용해 가속",
         description:
-          "지속시간 동안 액티브 1, 액티브 2, 액티브 3 스킬의 쿨타임을 절반으로 줄입니다.",
+          "사용 즉시 액티브 1, 액티브 2, 액티브 3 스킬의 쿨타임을 초기화하고, 지속시간 동안 해당 스킬들의 쿨타임이 절반으로 적용됩니다.",
         detailLines: [],
         cooldowns: [
-          { level: "base", value: "60초" },
+          { level: "base", value: "75초" },
           { level: "duration", value: "15초" },
         ],
+        video: {
+          src: getMaySkillVideo("ultimate"),
+          posterSrc: getCharacterSkillSrc("may", "필살기"),
+        },
       },
     ],
   },

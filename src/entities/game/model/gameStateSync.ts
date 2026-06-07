@@ -12,7 +12,8 @@ export const syncGameStoreState = (snapshot: GameRuntimeSnapshot) => {
   useGameStore.setState({
     ...snapshot,
     clearDelayMs:
-      snapshot.status === "levelClear" ? LEVEL_CLEAR_DELAY_MS : snapshot.clearDelayMs,
+      snapshot.status === "levelClear"
+        ? LEVEL_CLEAR_DELAY_MS
+        : snapshot.clearDelayMs,
   });
 };
-

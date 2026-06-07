@@ -11,7 +11,12 @@ import {
   useCharacterStore,
 } from "@/entities/character";
 import type { BagSlot, BlockDefinition, SkillKey } from "@/entities/game";
-import { BOARD_WIDTH, HIDDEN_ROWS, useGameStore } from "@/entities/game";
+import {
+  BOARD_WIDTH,
+  getMayPassiveCooldownMs,
+  HIDDEN_ROWS,
+  useGameStore,
+} from "@/entities/game";
 import { useGameRecordStore } from "@/entities/gameRecord";
 import { useScoreStore } from "@/entities/score";
 import { APP_ROUTES } from "@/shared/config/routes";
@@ -20,7 +25,6 @@ import { useFpsMonitor } from "@/shared/lib/performance/useFpsMonitor";
 import { useMeasuredHandler } from "@/shared/lib/performance/useMeasuredHandler";
 import { usePageTransitionTrace } from "@/shared/lib/performance/usePageTransitionTrace";
 import { usePerformanceTrace } from "@/shared/lib/performance/usePerformanceTrace";
-import { useKeyBindings } from "@/shared/lib/useKeyBindings";
 import { Button } from "@/shared/ui/Button";
 import { GameCanvas } from "@/widgets/gameCanvas/ui/GameCanvas";
 import "./game.css.ts";
@@ -108,18 +112,38 @@ const SkillSlotIcon = ({
   alt,
   label,
   cooldownSeconds,
+  cooldownProgress,
+  primedLabel,
+  timerTone = "cooldown",
 }: {
   src: string;
   alt: string;
   label: string;
   cooldownSeconds?: number;
+  cooldownProgress?: number;
+  primedLabel?: string;
+  timerTone?: "cooldown" | "ultimate";
 }) => {
   return (
     <div className="skill-icon-shell">
       <img className="skill-icon-image" src={src} alt={alt} draggable={false} />
       {cooldownSeconds !== undefined ? (
-        <span className="skill-icon-timer" aria-hidden="true">
-          {cooldownSeconds}
+        <span
+          className="skill-icon-timer"
+          aria-hidden="true"
+          data-tone={timerTone}
+          style={
+            {
+              "--cooldown-progress": cooldownProgress ?? 0,
+            } as CSSProperties
+          }
+        >
+          <span className="skill-icon-timer-value">{cooldownSeconds}</span>
+        </span>
+      ) : null}
+      {primedLabel ? (
+        <span className="skill-icon-prime-badge" aria-hidden="true">
+          {primedLabel}
         </span>
       ) : null}
       <span className="skill-key">{label}</span>
@@ -292,6 +316,8 @@ export const GamePage = () => {
   const comboToastTimerRef = useRef<number | null>(null);
   const [visibleCombo, setVisibleCombo] = useState<number | null>(null);
   const [showFailureOverlay, setShowFailureOverlay] = useState(false);
+  const [isUltimateCasting, setIsUltimateCasting] = useState(false);
+  const ultimateCastTimerRef = useRef<number | null>(null);
 
   const {
     bag,
@@ -302,18 +328,16 @@ export const GamePage = () => {
     targetScore,
     combo,
     skillCooldowns,
+    skillCooldownMax,
+    mayPassiveCooldownRemainingMs,
+    mayPrimedQDepth,
+    mayUltimateRemainingMs,
+    mayUltimateCastNonce,
     skillUses,
     helpOpen,
     failureBlocks,
     startLevel,
     resetRun,
-    moveLeft,
-    moveRight,
-    rotateClockwise,
-    rotateCounterClockwise,
-    softDrop,
-    hardDrop,
-    holdBlock,
     useSkill: activateSkill,
     togglePause,
     toggleHelp,
@@ -327,18 +351,16 @@ export const GamePage = () => {
       targetScore: state.targetScore,
       combo: state.combo,
       skillCooldowns: state.skillCooldowns,
+      skillCooldownMax: state.skillCooldownMax,
+      mayPassiveCooldownRemainingMs: state.mayPassiveCooldownRemainingMs,
+      mayPrimedQDepth: state.mayPrimedQDepth,
+      mayUltimateRemainingMs: state.mayUltimateRemainingMs,
+      mayUltimateCastNonce: state.mayUltimateCastNonce,
       skillUses: state.skillUses,
       helpOpen: state.helpOpen,
       failureBlocks: state.failureBlocks,
       startLevel: state.startLevel,
       resetRun: state.resetRun,
-      moveLeft: state.moveLeft,
-      moveRight: state.moveRight,
-      rotateClockwise: state.rotateClockwise,
-      rotateCounterClockwise: state.rotateCounterClockwise,
-      softDrop: state.softDrop,
-      hardDrop: state.hardDrop,
-      holdBlock: state.holdBlock,
       useSkill: state.useSkill,
       togglePause: state.togglePause,
       toggleHelp: state.toggleHelp,
@@ -389,32 +411,6 @@ export const GamePage = () => {
     return () => window.clearTimeout(timeoutId);
   }, [status]);
 
-  useKeyBindings(
-    {
-      ArrowLeft: () => moveLeft(),
-      ArrowRight: () => moveRight(),
-      ArrowDown: () => softDrop(),
-      KeyS: () => softDrop(),
-      Space: () => hardDrop(),
-      KeyA: () => rotateCounterClockwise(),
-      KeyD: () => rotateClockwise(),
-      ShiftLeft: () => holdBlock(),
-      ShiftRight: () => holdBlock(),
-      KeyQ: () => activateSkill("Q"),
-      KeyW: () => activateSkill("W"),
-      KeyE: () => activateSkill("E"),
-      KeyR: () => activateSkill("R"),
-      Escape: () => togglePause(),
-      F1: () => toggleHelp(),
-      Enter: () => {
-        if (status === "levelIntro") {
-          startLevel();
-        }
-      },
-    },
-    true,
-  );
-
   const handleViewResults = useMeasuredHandler("ui.game.viewResults", () => {
     startPageTransition("game", "result");
     void navigate(APP_ROUTES.RESULT);
@@ -464,22 +460,80 @@ export const GamePage = () => {
     status,
   ]);
 
+  useEffect(() => {
+    if (mayUltimateCastNonce <= 0) {
+      return undefined;
+    }
+
+    setIsUltimateCasting(true);
+
+    if (ultimateCastTimerRef.current !== null) {
+      window.clearTimeout(ultimateCastTimerRef.current);
+    }
+
+    ultimateCastTimerRef.current = window.setTimeout(() => {
+      setIsUltimateCasting(false);
+      ultimateCastTimerRef.current = null;
+    }, 900);
+
+    return () => {
+      if (ultimateCastTimerRef.current !== null) {
+        window.clearTimeout(ultimateCastTimerRef.current);
+        ultimateCastTimerRef.current = null;
+      }
+    };
+  }, [mayUltimateCastNonce]);
+
   const skillCooldownViews = skillKeys.map((key) => {
     const remainingMs = skillCooldowns[key];
+    const maxMs = skillCooldownMax[key];
 
-    if (remainingMs <= 0) {
+    if (remainingMs <= 0 || maxMs <= 0) {
       return null;
     }
 
     return {
       key,
       remainingSeconds: Math.max(1, Math.ceil(remainingMs / 1000)),
+      progress: Math.max(0, Math.min(1, 1 - remainingMs / maxMs)),
     };
   });
+
+  const isUltimateActive = mayUltimateRemainingMs > 0;
+  const isMayCharacter = selectedCharacter.id === "may";
+  const mayPassiveCooldownView =
+    isMayCharacter && mayPassiveCooldownRemainingMs > 0
+      ? {
+          remainingSeconds: Math.max(
+            1,
+            Math.ceil(mayPassiveCooldownRemainingMs / 1000),
+          ),
+          progress: Math.max(
+            0,
+            Math.min(
+              1,
+              1 -
+                mayPassiveCooldownRemainingMs / getMayPassiveCooldownMs(level),
+            ),
+          ),
+        }
+      : null;
+  const ultimateRemainingSeconds = isUltimateActive
+    ? Math.max(1, Math.ceil(mayUltimateRemainingMs / 1000))
+    : undefined;
+  const ultimateProgress = isUltimateActive
+    ? Math.max(0, Math.min(1, 1 - mayUltimateRemainingMs / 15000))
+    : undefined;
 
   const skillSlotItems = selectedCharacter.skills.map((skill, index) => {
     const isPassive = index === 0;
     const activeKey = skillKeys[index - 1];
+    const isPrimedQ =
+      selectedCharacter.id === "may" &&
+      activeKey === "Q" &&
+      mayPrimedQDepth !== null;
+    const isUltimateSkillActive =
+      selectedCharacter.id === "may" && activeKey === "R" && isUltimateActive;
     const cooldownView = !isPassive
       ? skillCooldownViews.find((item) => item?.key === activeKey)
       : null;
@@ -489,7 +543,22 @@ export const GamePage = () => {
         src={getCharacterSkillSrc(selectedCharacter.id, skill.type)}
         alt=""
         label={skillLabels[index] ?? skill.type}
-        cooldownSeconds={cooldownView?.remainingSeconds}
+        cooldownSeconds={
+          isPassive
+            ? mayPassiveCooldownView?.remainingSeconds
+            : isUltimateSkillActive
+              ? ultimateRemainingSeconds
+              : cooldownView?.remainingSeconds
+        }
+        cooldownProgress={
+          isPassive
+            ? mayPassiveCooldownView?.progress
+            : isUltimateSkillActive
+              ? ultimateProgress
+              : cooldownView?.progress
+        }
+        primedLabel={isPrimedQ ? `↓+${mayPrimedQDepth}` : undefined}
+        timerTone={isUltimateSkillActive ? "ultimate" : "cooldown"}
       />
     );
 
@@ -498,7 +567,7 @@ export const GamePage = () => {
         <div
           key={skill.id}
           className="skill-slot skill-slot--passive"
-          data-ready="true"
+          data-ready={mayPassiveCooldownRemainingMs <= 0}
         >
           {sharedContent}
         </div>
@@ -511,6 +580,8 @@ export const GamePage = () => {
         type="button"
         className="skill-slot"
         data-ready={skillCooldowns[activeKey] <= 0}
+        data-primed={isPrimedQ}
+        data-ultimate={isUltimateSkillActive}
         onClick={() => handleActivateSkill(activeKey)}
       >
         {sharedContent}
@@ -639,7 +710,15 @@ export const GamePage = () => {
 
         <main className="game-core">
           <aside className="game-left-rail" aria-label="Character and skills">
-            <div className="character-orbit">
+            <div
+              className={[
+                "character-orbit",
+                isUltimateActive ? "character-orbit--ultimate-active" : "",
+                isUltimateCasting ? "character-orbit--ultimate-cast" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
               {selectedCharacter?.imageSrc ? (
                 <img
                   src={selectedCharacter.imageSrc}
@@ -663,10 +742,29 @@ export const GamePage = () => {
                 {targetScore === null ? "SURVIVE" : formatNumber(targetScore)}
               </span>
             </div>
+            {isUltimateActive ? (
+              <div className="ultimate-status-badge" role="status">
+                <span className="ultimate-status-label">궁극기 활성</span>
+                <strong>{ultimateRemainingSeconds}s</strong>
+                <span className="ultimate-status-progress" aria-hidden="true">
+                  <span
+                    className="ultimate-status-progress-bar"
+                    style={
+                      {
+                        "--ultimate-progress": ultimateProgress ?? 0,
+                      } as CSSProperties
+                    }
+                  />
+                </span>
+              </div>
+            ) : null}
             {status === "failed" ? (
               <FailurePhysicsPile blocks={failureBlocks} />
             ) : (
-              <GameCanvas />
+              <GameCanvas
+                isUltimateActive={isUltimateActive}
+                isUltimateCasting={isUltimateCasting}
+              />
             )}
             {visibleCombo !== null ? (
               <div className="combo-toast" role="status">

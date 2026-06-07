@@ -821,6 +821,36 @@ export const videoControl = style({
   },
 });
 
+export const videoControlButton = style({
+  width: 38,
+  height: 38,
+  display: "grid",
+  placeItems: "center",
+  padding: 0,
+  border: 0,
+  borderRadius: 999,
+  background:
+    "linear-gradient(135deg, var(--character-accent), var(--character-bg-accent))",
+  boxShadow:
+    "0 10px 18px color-mix(in srgb, var(--character-accent) 24%, transparent)",
+  cursor: "pointer",
+  selectors: {
+    "&:hover": {
+      filter: "brightness(1.05)",
+    },
+    "&:focus-visible": {
+      outline: "3px solid #1497ff",
+      outlineOffset: 2,
+    },
+  },
+  "@media": {
+    "(min-width: 961px)": {
+      width: 42,
+      height: 42,
+    },
+  },
+});
+
 export const skillDescription = style({
   minWidth: 0,
   display: "grid",
@@ -975,11 +1005,17 @@ export const cooldownLevel = style({
   },
 });
 
+export const startButtonArea = style({
+  display: "grid",
+  justifyItems: "center",
+  gap: 8,
+  "@media": {
+    "(max-width: 960px)": {},
+  },
+});
+
 export const startButton = style({
   width: "clamp(150px, 12vw, 188px)",
-  alignSelf: "start",
-  justifySelf: "center",
-  marginTop: "clamp(8px, 0.9vh, 12px)",
   padding: 0,
   border: 0,
   background: "transparent",
@@ -1004,7 +1040,6 @@ export const startButton = style({
   "@media": {
     "(max-width: 960px)": {
       width: "clamp(170px, 24vw, 220px)",
-      alignSelf: "center",
     },
   },
 });
@@ -1034,6 +1069,15 @@ export const startButtonImage = style({
       width: "100%",
     },
   },
+});
+
+export const unavailableMessage = style({
+  margin: 0,
+  color: "#d92d20",
+  fontSize: "clamp(13px, 1vw, 15px)",
+  fontWeight: 900,
+  lineHeight: 1.3,
+  textAlign: "center",
 });
 
 export const modalGrid = style({
