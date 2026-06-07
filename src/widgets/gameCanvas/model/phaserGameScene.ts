@@ -26,8 +26,8 @@ import {
   getMayActive2CooldownMs,
   getMayActive3CooldownMs,
   getMayActive3Depth,
-  getMayActive3RequiredUses,
   getMayPassiveCooldownMs,
+  getSkillBlockScore,
   getSpeedMs,
   hardDrop as applyHardDrop,
   holdBlock as applyHoldBlock,
@@ -35,9 +35,9 @@ import {
   meltBoardCellsAt,
   meltRandomBoardBlock,
   moveHorizontal,
+  reduceSkillCooldownMax,
   reduceSkillCooldowns,
   rotateActiveBlock,
-  selectBestMayActive1Target,
   spawnNextBlock,
   stepDown,
   tickObstacles,
@@ -97,10 +97,18 @@ const MAY_PASSIVE_EFFECT_MS = 680;
 const MAY_PASSIVE_DROP_MS = 360;
 const MAY_ULTIMATE_DURATION_MS = 15000;
 const MAY_ULTIMATE_COOLDOWN_MS = 60000;
+const COOLDOWN_TICK_MS = 250;
 
 type MayPassiveMeltTarget = NonNullable<
   ReturnType<typeof meltRandomBoardBlock>["target"]
 >;
+type MayMeltEffectTarget = Pick<MayPassiveMeltTarget, "x" | "y">;
+type FallingOverlayCell = {
+  from: Point;
+  to: Point;
+  startedAtMs: number;
+  durationMs: number;
+};
 
 const createSnapshot = (): GameRuntimeSnapshot => {
   const state = useGameStore.getState();
@@ -118,6 +126,10 @@ const createSnapshot = (): GameRuntimeSnapshot => {
     maxCombo: state.maxCombo,
     targetScore: state.targetScore,
     skillCooldowns: state.skillCooldowns,
+    skillCooldownMax: state.skillCooldownMax,
+    mayPrimedQDepth: state.mayPrimedQDepth,
+    mayUltimateRemainingMs: state.mayUltimateRemainingMs,
+    mayUltimateCastNonce: state.mayUltimateCastNonce,
     skillUses: state.skillUses,
     obstacleElapsedMs: state.obstacleElapsedMs,
     obstacleWarningMs: state.obstacleWarningMs,
@@ -139,12 +151,18 @@ class PhaserGameEngine {
   private mayPassiveAccumulatorMs = 0;
   private isMayMeltRunning = false;
   private mayActive1Targets: Point[] = [];
+  private mayActive1TargetKeys = new Set<string>();
   private mayActive2ConsumedKeys = new Set<string>();
-  private mayActive1UsesSinceActive3 = 0;
   private mayActive3Primed = false;
   private mayUltimateRemainingMs = 0;
+  private onMayUltimateCastEffect?: () => void;
   private onMayPassiveEffect?: (
     target: MayPassiveMeltTarget,
+    applyGravity: () => MayPassiveMeltTarget | null,
+    onComplete?: () => void,
+  ) => void;
+  private onMayMultiMeltEffect?: (
+    targets: MayMeltEffectTarget[],
     applyGravity: () => MayPassiveMeltTarget | null,
     onComplete?: () => void,
   ) => void;
@@ -156,14 +174,105 @@ class PhaserGameEngine {
       applyGravity: () => MayPassiveMeltTarget | null,
       onComplete?: () => void,
     ) => void,
+    onMayMultiMeltEffect?: (
+      targets: MayMeltEffectTarget[],
+      applyGravity: () => MayPassiveMeltTarget | null,
+      onComplete?: () => void,
+    ) => void,
+    onMayUltimateCastEffect?: () => void,
   ) {
     this.state = initialState;
+    this.mayUltimateRemainingMs = initialState.mayUltimateRemainingMs;
     this.onMayPassiveEffect = onMayPassiveEffect;
+    this.onMayMultiMeltEffect = onMayMultiMeltEffect;
+    this.onMayUltimateCastEffect = onMayUltimateCastEffect;
     this.emit();
   }
 
   get snapshot() {
     return this.state;
+  }
+
+  getMayActive2IndicatorTargets() {
+    return this.mayActive1Targets.filter((target) => {
+      const key = this.getPointKey(target);
+
+      return (
+        !this.mayActive2ConsumedKeys.has(key) &&
+        target.y >= HIDDEN_ROWS
+      );
+    });
+  }
+
+  private getRememberedMayActive1Targets() {
+    return this.mayActive1Targets.filter(
+      (target) => !this.mayActive2ConsumedKeys.has(this.getPointKey(target)),
+    );
+  }
+
+  private getMayActive1CandidateCells() {
+    const activeColumns = new Set(
+      (this.state.active ? getAbsoluteCells(this.state.active) : []).map(
+        (cell) => cell.x,
+      ),
+    );
+    const excludedKeys = this.getRememberedMayActive1Keys();
+
+    return this.state.board.flatMap((row, y) =>
+      row.flatMap((cell, x) =>
+        cell !== 0 &&
+        y >= HIDDEN_ROWS &&
+        !activeColumns.has(x) &&
+        !excludedKeys.has(this.getPointKey({ x, y }))
+          ? [{ x, y }]
+          : [],
+      ),
+    );
+  }
+
+  private pickBestMayActive1Target(candidates: Point[], depth: number) {
+    const rememberedColumns = new Set(
+      this.getRememberedMayActive1Targets().map((target) => target.x),
+    );
+
+    return (
+      candidates
+        .map((candidate) => ({
+          point: candidate,
+          targets: this.getMayActive1Cells(candidate, depth),
+          result: meltBoardCellsAt(
+            this.state,
+            this.getMayActive1Cells(candidate, depth),
+          ),
+        }))
+        .filter((candidate) => candidate.result.target !== null)
+        .sort((left, right) => {
+          const leftMoved = left.result.target?.movedCells.length ?? 0;
+          const rightMoved = right.result.target?.movedCells.length ?? 0;
+          const leftCleared = left.targets.length;
+          const rightCleared = right.targets.length;
+          const leftRemembered = rememberedColumns.has(left.point.x) ? 1 : 0;
+          const rightRemembered = rememberedColumns.has(right.point.x) ? 1 : 0;
+
+          return (
+            rightMoved - leftMoved ||
+            rightCleared - leftCleared ||
+            rightRemembered - leftRemembered ||
+            right.point.y - left.point.y ||
+            left.point.x - right.point.x
+          );
+        })[0]?.point ?? null
+    );
+  }
+
+  private getMayActive1Target(depth = 0) {
+    const candidates = this.getMayActive1CandidateCells();
+
+    if (candidates.length === 0) {
+      return null;
+    }
+
+    return this.pickBestMayActive1Target(candidates, depth);
   }
 
   update(deltaMs: number) {
@@ -174,9 +283,9 @@ class PhaserGameEngine {
       this.tickMayUltimate(deltaMs);
       this.tickMayPassive(deltaMs);
 
-      while (this.cooldownAccumulatorMs >= 1000) {
-        this.cooldownAccumulatorMs -= 1000;
-        this.tickSkillCooldowns();
+      while (this.cooldownAccumulatorMs >= COOLDOWN_TICK_MS) {
+        this.cooldownAccumulatorMs -= COOLDOWN_TICK_MS;
+        this.tickSkillCooldowns(COOLDOWN_TICK_MS);
       }
 
       while (
@@ -334,14 +443,23 @@ class PhaserGameEngine {
     this.setFromLogicResult(result.next, result.status);
   };
 
-  tickSkillCooldowns = () => {
+  tickSkillCooldowns = (elapsedMs = COOLDOWN_TICK_MS) => {
     if (this.state.status !== "playing") {
       return;
     }
 
+    const nextSkillCooldowns = reduceSkillCooldowns(
+      this.state.skillCooldowns,
+      elapsedMs,
+    );
+
     this.setState({
       ...this.state,
-      skillCooldowns: reduceSkillCooldowns(this.state.skillCooldowns, 1000),
+      skillCooldowns: nextSkillCooldowns,
+      skillCooldownMax: reduceSkillCooldownMax(
+        nextSkillCooldowns,
+        this.state.skillCooldownMax,
+      ),
     });
   };
 
@@ -451,10 +569,52 @@ class PhaserGameEngine {
 
   private resetMaySkillState() {
     this.mayActive1Targets = [];
+    this.mayActive1TargetKeys = new Set<string>();
     this.mayActive2ConsumedKeys = new Set<string>();
-    this.mayActive1UsesSinceActive3 = 0;
     this.mayActive3Primed = false;
     this.mayUltimateRemainingMs = 0;
+  }
+
+  private getRememberedMayActive1Keys() {
+    return new Set(
+      this.mayActive1Targets
+        .map((target) => this.getPointKey(target))
+        .filter((key) => !this.mayActive2ConsumedKeys.has(key)),
+    );
+  }
+
+  private rememberMayActive1Target(target: Point) {
+    const key = this.getPointKey(target);
+
+    if (this.mayActive1TargetKeys.has(key)) {
+      return;
+    }
+
+    this.mayActive2ConsumedKeys.delete(key);
+    this.mayActive1TargetKeys.add(key);
+    this.mayActive1Targets.push(target);
+  }
+
+  private consumeMayActive1Targets(targets: Point[]) {
+    if (targets.length === 0) {
+      return;
+    }
+
+    const consumedKeys = new Set(targets.map((target) => this.getPointKey(target)));
+
+    targets.forEach((target) => {
+      this.mayActive2ConsumedKeys.add(this.getPointKey(target));
+    });
+    this.mayActive1Targets = this.mayActive1Targets.filter((target) => {
+      const key = this.getPointKey(target);
+
+      if (!consumedKeys.has(key)) {
+        return true;
+      }
+
+      this.mayActive1TargetKeys.delete(key);
+      return false;
+    });
   }
 
   private tickMayUltimate(deltaMs: number) {
@@ -466,6 +626,18 @@ class PhaserGameEngine {
       0,
       this.mayUltimateRemainingMs - deltaMs,
     );
+
+    const roundedRemainingMs =
+      this.mayUltimateRemainingMs > 0
+        ? Math.ceil(this.mayUltimateRemainingMs / 100) * 100
+        : 0;
+
+    if (roundedRemainingMs !== this.state.mayUltimateRemainingMs) {
+      this.setState({
+        ...this.state,
+        mayUltimateRemainingMs: roundedRemainingMs,
+      });
+    }
   }
 
   private isMayUltimateActive() {
@@ -482,23 +654,13 @@ class PhaserGameEngine {
     return `${point.x}:${point.y}`;
   }
 
-  private isPointInActiveColumn(point: Point) {
-    if (!this.state.active) {
-      return false;
-    }
-
-    return getAbsoluteCells(this.state.active).some(
-      (cell) => cell.x === point.x,
-    );
-  }
-
   private getMayActive1Cells(target: Point, depth: number) {
     return Array.from({ length: depth + 1 }, (_, index) => ({
       x: target.x,
-      y: target.y + index,
+      y: target.y - index,
     })).filter(
       (cell) =>
-        cell.y < this.state.board.length &&
+        cell.y >= 0 &&
         this.state.board[cell.y]?.[cell.x] !== 0,
     );
   }
@@ -568,16 +730,15 @@ class PhaserGameEngine {
       return;
     }
 
-    const firstTarget = selectBestMayActive1Target(this.state);
-
-    if (!firstTarget) {
-      return;
-    }
-
     const useCount = getMayActive1TargetCount(this.state.level);
     const active3Depth = this.mayActive3Primed
       ? getMayActive3Depth(this.state.level)
       : 0;
+    const firstTarget = this.getMayActive1Target(active3Depth);
+
+    if (!firstTarget) {
+      return;
+    }
 
     this.isMayMeltRunning = true;
     window.setTimeout(() => {
@@ -586,16 +747,22 @@ class PhaserGameEngine {
       }
     }, 12000);
     this.mayActive3Primed = false;
-    this.mayActive1UsesSinceActive3 += 1;
+    const nextCooldownMs = this.getMaySkillCooldownMs(
+      "Q",
+      getMayActive1CooldownMs(this.state.level),
+    );
+
     this.setState({
       ...this.state,
       skillCooldowns: {
         ...this.state.skillCooldowns,
-        Q: this.getMaySkillCooldownMs(
-          "Q",
-          getMayActive1CooldownMs(this.state.level),
-        ),
+        Q: nextCooldownMs,
       },
+      skillCooldownMax: {
+        ...this.state.skillCooldownMax,
+        Q: nextCooldownMs,
+      },
+      mayPrimedQDepth: null,
       skillUses: {
         ...this.state.skillUses,
         Q: this.state.skillUses.Q + 1,
@@ -608,61 +775,71 @@ class PhaserGameEngine {
     this.isMayMeltRunning = false;
   }
 
+  private applySkillRemovalScore(nextState: GameData, removedCount: number) {
+    const nextScore = nextState.score + getSkillBlockScore(removedCount);
+    const nextStatus =
+      nextState.targetScore !== null && nextScore >= nextState.targetScore
+        ? "levelClear"
+        : ("playing" as const);
+
+    this.setState({
+      ...nextState,
+      score: nextScore,
+      status: nextStatus,
+      speedMs: this.state.speedMs,
+      clearDelayMs: nextStatus === "levelClear" ? LEVEL_CLEAR_DELAY_MS : 0,
+    });
+  }
+
   private playMayActive1Step(index: number, total: number, depth: number) {
     if (index >= total || this.state.status !== "playing") {
       this.finishMayMeltRun();
       return;
     }
 
-    const target = selectBestMayActive1Target(this.state);
+    const target = this.getMayActive1Target(depth);
 
     if (!target) {
       this.finishMayMeltRun();
       return;
     }
 
-    const preview = meltBoardCellsAt(
-      this.state,
-      this.getMayActive1Cells(target, depth),
-    );
+    const resolvedTargets = this.getMayActive1Cells(target, depth);
+    const preview = meltBoardCellsAt(this.state, resolvedTargets);
 
     if (!preview.target) {
       this.finishMayMeltRun();
       return;
     }
 
-    this.onMayPassiveEffect?.(
-      preview.target,
+    const playEffect =
+      depth > 0 && preview.target.movedCells.length >= 0
+        ? this.onMayMultiMeltEffect
+        : null;
+
+    playEffect?.(
+      resolvedTargets,
       () => {
         if (this.state.status !== "playing") {
           return null;
         }
 
-        const latestTarget = selectBestMayActive1Target(this.state);
+        const actualTargets = resolvedTargets.filter(
+          (cell) => this.state.board[cell.y]?.[cell.x] !== 0,
+        );
 
-        if (!latestTarget) {
+        if (actualTargets.length === 0) {
           return null;
         }
 
-        const latestResult = meltBoardCellsAt(
-          this.state,
-          this.getMayActive1Cells(latestTarget, depth),
-        );
+        const latestResult = meltBoardCellsAt(this.state, actualTargets);
 
         if (!latestResult.target) {
           return null;
         }
 
-        this.setState({
-          ...latestResult.next,
-          status: this.state.status,
-          speedMs: this.state.speedMs,
-          clearDelayMs: this.state.clearDelayMs,
-        });
-        this.mayActive1Targets.push({
-          x: latestResult.target.x,
-          y: latestResult.target.y,
-        });
+        this.applySkillRemovalScore(latestResult.next, actualTargets.length);
+        this.rememberMayActive1Target(target);
 
         return latestResult.target;
       },
@@ -670,6 +847,39 @@ class PhaserGameEngine {
         this.playMayActive1Step(index + 1, total, depth);
       },
     );
+
+    if (!playEffect) {
+      this.onMayPassiveEffect?.(
+        preview.target,
+        () => {
+          if (this.state.status !== "playing") {
+            return null;
+          }
+
+          const actualTargets = resolvedTargets.filter(
+            (cell) => this.state.board[cell.y]?.[cell.x] !== 0,
+          );
+
+          if (actualTargets.length === 0) {
+            return null;
+          }
+
+          const latestResult = meltBoardCellsAt(this.state, actualTargets);
+
+          if (!latestResult.target) {
+            return null;
+          }
+
+          this.applySkillRemovalScore(latestResult.next, actualTargets.length);
+          this.rememberMayActive1Target(target);
+
+          return latestResult.target;
+        },
+        () => {
+          this.playMayActive1Step(index + 1, total, depth);
+        },
+      );
+    }
   }
 
   private useMayActive2() {
@@ -682,12 +892,26 @@ class PhaserGameEngine {
 
       return (
         !this.mayActive2ConsumedKeys.has(key) &&
-        !this.isPointInActiveColumn(target) &&
         this.state.board[target.y]?.[target.x] !== 0
       );
     });
 
     if (targets.length === 0) {
+      return;
+    }
+
+    const uniqueTargets = targets.filter((target, index) => {
+      const key = this.getPointKey(target);
+
+      return (
+        targets.findIndex(
+          (candidate) => this.getPointKey(candidate) === key,
+        ) === index
+      );
+    });
+    const preview = meltBoardCellsAt(this.state, uniqueTargets);
+
+    if (!preview.target) {
       return;
     }
 
@@ -697,70 +921,54 @@ class PhaserGameEngine {
         this.finishMayMeltRun();
       }
     }, 12000);
+    const nextCooldownMs = this.getMaySkillCooldownMs(
+      "W",
+      getMayActive2CooldownMs(this.state.level),
+    );
+
     this.setState({
       ...this.state,
       skillCooldowns: {
         ...this.state.skillCooldowns,
-        W: this.getMaySkillCooldownMs(
-          "W",
-          getMayActive2CooldownMs(this.state.level),
-        ),
+        W: nextCooldownMs,
+      },
+      skillCooldownMax: {
+        ...this.state.skillCooldownMax,
+        W: nextCooldownMs,
       },
       skillUses: {
         ...this.state.skillUses,
         W: this.state.skillUses.W + 1,
       },
     });
-    this.playMayActive2Step(targets, 0);
-  }
-
-  private playMayActive2Step(targets: Point[], index: number) {
-    if (index >= targets.length || this.state.status !== "playing") {
-      this.finishMayMeltRun();
-      return;
-    }
-
-    const target = targets[index];
-
-    if (this.state.board[target.y]?.[target.x] === 0) {
-      this.mayActive2ConsumedKeys.add(this.getPointKey(target));
-      this.playMayActive2Step(targets, index + 1);
-      return;
-    }
-
-    const preview = meltBoardBlockAt(this.state, target);
-
-    if (!preview.target) {
-      this.mayActive2ConsumedKeys.add(this.getPointKey(target));
-      this.playMayActive2Step(targets, index + 1);
-      return;
-    }
-
-    this.onMayPassiveEffect?.(
-      preview.target,
+    this.onMayMultiMeltEffect?.(
+      uniqueTargets,
       () => {
         if (this.state.status !== "playing") {
           return null;
         }
 
-        const latestResult = meltBoardBlockAt(this.state, target);
+        const latestTargets = uniqueTargets.filter(
+          (target) => this.state.board[target.y]?.[target.x] !== 0,
+        );
+
+        if (latestTargets.length === 0) {
+          return null;
+        }
+
+        const latestResult = meltBoardCellsAt(this.state, latestTargets);
 
         if (!latestResult.target) {
           return null;
         }
 
-        this.setState({
-          ...latestResult.next,
-          status: this.state.status,
-          speedMs: this.state.speedMs,
-          clearDelayMs: this.state.clearDelayMs,
-        });
-        this.mayActive2ConsumedKeys.add(this.getPointKey(target));
+        this.applySkillRemovalScore(latestResult.next, latestTargets.length);
+        this.consumeMayActive1Targets(latestTargets);
 
         return latestResult.target;
       },
       () => {
-        this.playMayActive2Step(targets, index + 1);
+        this.finishMayMeltRun();
       },
     );
   }
@@ -769,24 +977,29 @@ class PhaserGameEngine {
     if (
       this.state.skillCooldowns.E > 0 ||
       this.isMayMeltRunning ||
-      this.mayActive3Primed ||
-      this.mayActive1UsesSinceActive3 <
-        getMayActive3RequiredUses(this.state.level)
+      this.mayActive3Primed
     ) {
       return;
     }
 
-    this.mayActive1UsesSinceActive3 = 0;
     this.mayActive3Primed = true;
+    const nextDepth = getMayActive3Depth(this.state.level);
+    const nextCooldownMs = this.getMaySkillCooldownMs(
+      "E",
+      getMayActive3CooldownMs(this.state.level),
+    );
+
     this.setState({
       ...this.state,
       skillCooldowns: {
         ...this.state.skillCooldowns,
-        E: this.getMaySkillCooldownMs(
-          "E",
-          getMayActive3CooldownMs(this.state.level),
-        ),
+        E: nextCooldownMs,
       },
+      skillCooldownMax: {
+        ...this.state.skillCooldownMax,
+        E: nextCooldownMs,
+      },
+      mayPrimedQDepth: nextDepth,
       skillUses: {
         ...this.state.skillUses,
         E: this.state.skillUses.E + 1,
@@ -800,20 +1013,31 @@ class PhaserGameEngine {
     }
 
     this.mayUltimateRemainingMs = MAY_ULTIMATE_DURATION_MS;
+
     this.setState({
       ...this.state,
       skillCooldowns: {
         ...this.state.skillCooldowns,
-        Q: Math.ceil(this.state.skillCooldowns.Q / 2),
-        W: Math.ceil(this.state.skillCooldowns.W / 2),
-        E: Math.ceil(this.state.skillCooldowns.E / 2),
+        Q: 0,
+        W: 0,
+        E: 0,
         R: MAY_ULTIMATE_COOLDOWN_MS,
       },
+      skillCooldownMax: {
+        ...this.state.skillCooldownMax,
+        Q: 0,
+        W: 0,
+        E: 0,
+        R: MAY_ULTIMATE_COOLDOWN_MS,
+      },
+      mayUltimateRemainingMs: MAY_ULTIMATE_DURATION_MS,
+      mayUltimateCastNonce: this.state.mayUltimateCastNonce + 1,
       skillUses: {
         ...this.state.skillUses,
         R: this.state.skillUses.R + 1,
       },
     });
+    this.onMayUltimateCastEffect?.();
   }
 
   private setFromLogicResult(next: GameData, status: GameStatus) {
@@ -843,9 +1067,19 @@ export class GameScene extends Phaser.Scene {
   private engine!: PhaserGameEngine;
   private backgroundGraphics!: Phaser.GameObjects.Graphics;
   private warningGraphics!: Phaser.GameObjects.Graphics;
+  private ultimateAuraGraphics!: Phaser.GameObjects.Graphics;
+  private mayIndicatorGraphics!: Phaser.GameObjects.Graphics;
   private blockContainer!: Phaser.GameObjects.Container;
   private passiveEffectContainer!: Phaser.GameObjects.Container;
+  private ultimateEffectContainer!: Phaser.GameObjects.Container;
   private passiveEffectHiddenCells = new Set<string>();
+  private fallingOverlayCells: FallingOverlayCell[] = [];
+  private blockSprites: Phaser.GameObjects.Image[] = [];
+  private obstaclePreviewSprites: Phaser.GameObjects.Image[] = [];
+  private fallingOverlaySprites: Phaser.GameObjects.Image[] = [];
+  private visibleBlockSpriteCount = 0;
+  private visibleObstaclePreviewSpriteCount = 0;
+  private visibleFallingOverlaySpriteCount = 0;
   private blockTextureKey = "character-block";
 
   preload() {
@@ -860,8 +1094,14 @@ export class GameScene extends Phaser.Scene {
   create() {
     this.engine = new PhaserGameEngine(
       createSnapshot(),
-      (target, applyGravity) => {
-        this.playMayPassiveEffect(target, applyGravity);
+      (target, applyGravity, onComplete) => {
+        this.playMayPassiveEffect(target, applyGravity, onComplete);
+      },
+      (targets, applyGravity, onComplete) => {
+        this.playMayMultiMeltEffect(targets, applyGravity, onComplete);
+      },
+      () => {
+        this.playMayUltimateCastEffect();
       },
     );
     setGameEngineBridge({
@@ -886,8 +1126,14 @@ export class GameScene extends Phaser.Scene {
 
     this.backgroundGraphics = this.add.graphics();
     this.warningGraphics = this.add.graphics();
+    this.ultimateAuraGraphics = this.add.graphics();
+    this.mayIndicatorGraphics = this.add.graphics();
     this.blockContainer = this.add.container(0, 0);
     this.passiveEffectContainer = this.add.container(0, 0);
+    this.ultimateEffectContainer = this.add.container(0, 0);
+    this.ultimateAuraGraphics.setDepth(9);
+    this.mayIndicatorGraphics.setDepth(15);
+    this.ultimateEffectContainer.setDepth(18);
     this.passiveEffectContainer.setDepth(20);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -916,7 +1162,6 @@ export class GameScene extends Phaser.Scene {
     const boardPanelHeight = boardHeight + BOARD_PADDING * 2;
 
     this.backgroundGraphics.clear();
-    this.blockContainer.removeAll(true);
 
     this.backgroundGraphics.fillStyle(0xfaf7f4, 0.96);
     this.backgroundGraphics.fillRoundedRect(
@@ -939,6 +1184,17 @@ export class GameScene extends Phaser.Scene {
       uiPx(14),
     );
     this.warningGraphics.clear();
+    this.ultimateAuraGraphics.clear();
+    this.mayIndicatorGraphics.clear();
+    this.visibleBlockSpriteCount = 0;
+    this.visibleObstaclePreviewSpriteCount = 0;
+    this.visibleFallingOverlaySpriteCount = 0;
+
+    const hiddenBoardCellKeys = new Set(this.passiveEffectHiddenCells);
+
+    this.fallingOverlayCells.forEach((cell) => {
+      hiddenBoardCellKeys.add(this.getBoardCellKey(cell.to.x, cell.to.y));
+    });
 
     const renderBoard = getRenderBoard(state.board, state.active);
     const occupiedCellFill = 0xf5f1ea;
@@ -964,19 +1220,16 @@ export class GameScene extends Phaser.Scene {
             colIndex,
             rowIndex + HIDDEN_ROWS,
           );
-          if (this.passiveEffectHiddenCells.has(boardCellKey)) {
+          if (hiddenBoardCellKeys.has(boardCellKey)) {
             return;
           }
 
-          const image = this.add.image(
+          this.drawBoardBlockSprite(
             x + cellSize / 2,
             y + cellSize / 2,
-            this.blockTextureKey,
+            cellSize,
+            cell === 4 ? 0.92 : cell === 3 ? 0.96 : 1,
           );
-          const inset = Math.max(1, Math.floor(cellSize * 0.06));
-          image.setDisplaySize(cellSize - inset * 2, cellSize - inset * 2);
-          image.setAlpha(cell === 4 ? 0.92 : cell === 3 ? 0.96 : 1);
-          this.blockContainer.add(image);
         }
       });
     });
@@ -1004,15 +1257,12 @@ export class GameScene extends Phaser.Scene {
           uiPx(4),
         );
 
-        const image = this.add.image(
+        this.drawBoardBlockSprite(
           x + cellSize / 2,
           y + cellSize / 2,
-          this.blockTextureKey,
+          cellSize,
+          0.28,
         );
-        const inset = Math.max(1, Math.floor(cellSize * 0.06));
-        image.setDisplaySize(cellSize - inset * 2, cellSize - inset * 2);
-        image.setAlpha(0.28);
-        this.blockContainer.add(image);
       });
     }
 
@@ -1084,17 +1334,124 @@ export class GameScene extends Phaser.Scene {
             uiPx(4),
           );
 
-          const image = this.add.image(
+          this.drawBoardBlockSprite(
             x + cellSize / 2,
             y + cellSize / 2,
-            this.blockTextureKey,
+            cellSize,
+            0.96,
+            true,
           );
-          const inset = Math.max(1, Math.floor(cellSize * 0.06));
-          image.setDisplaySize(cellSize - inset * 2, cellSize - inset * 2);
-          image.setAlpha(0.96);
-          this.blockContainer.add(image);
         });
       });
+    }
+
+    this.renderMayUltimateAura(boardPanelX, boardPanelY, boardPanelWidth, boardPanelHeight);
+    this.drawMayActive2Indicators();
+    this.drawFallingOverlaySprites();
+
+    this.hideUnusedBoardBlockSprites();
+    this.hideUnusedObstaclePreviewSprites();
+    this.hideUnusedFallingOverlaySprites();
+  }
+
+  private drawBoardBlockSprite(
+    centerX: number,
+    centerY: number,
+    cellSize: number,
+    alpha: number,
+    isObstaclePreview = false,
+  ) {
+    const image = isObstaclePreview
+      ? this.getObstaclePreviewSprite()
+      : this.getBoardBlockSprite();
+    const inset = Math.max(1, Math.floor(cellSize * 0.06));
+
+    image.setPosition(centerX, centerY);
+    image.setDisplaySize(cellSize - inset * 2, cellSize - inset * 2);
+    image.setAlpha(alpha);
+    image.setVisible(true);
+  }
+
+  private getBoardBlockSprite() {
+    const existing = this.blockSprites[this.visibleBlockSpriteCount];
+
+    if (existing) {
+      this.visibleBlockSpriteCount += 1;
+      existing.setTexture(this.blockTextureKey);
+      return existing;
+    }
+
+    const image = this.add.image(0, 0, this.blockTextureKey);
+    this.blockContainer.add(image);
+    this.blockSprites.push(image);
+    this.visibleBlockSpriteCount += 1;
+
+    return image;
+  }
+
+  private hideUnusedBoardBlockSprites() {
+    for (
+      let index = this.visibleBlockSpriteCount;
+      index < this.blockSprites.length;
+      index += 1
+    ) {
+      this.blockSprites[index].setVisible(false);
+    }
+  }
+
+  private getObstaclePreviewSprite() {
+    const existing =
+      this.obstaclePreviewSprites[this.visibleObstaclePreviewSpriteCount];
+
+    if (existing) {
+      this.visibleObstaclePreviewSpriteCount += 1;
+      existing.setTexture(this.blockTextureKey);
+      return existing;
+    }
+
+    const image = this.add.image(0, 0, this.blockTextureKey);
+    this.blockContainer.add(image);
+    this.obstaclePreviewSprites.push(image);
+    this.visibleObstaclePreviewSpriteCount += 1;
+
+    return image;
+  }
+
+  private hideUnusedObstaclePreviewSprites() {
+    for (
+      let index = this.visibleObstaclePreviewSpriteCount;
+      index < this.obstaclePreviewSprites.length;
+      index += 1
+    ) {
+      this.obstaclePreviewSprites[index].setVisible(false);
+    }
+  }
+
+  private getFallingOverlaySprite() {
+    const existing =
+      this.fallingOverlaySprites[this.visibleFallingOverlaySpriteCount];
+
+    if (existing) {
+      this.visibleFallingOverlaySpriteCount += 1;
+      existing.setTexture(this.blockTextureKey);
+      return existing;
+    }
+
+    const image = this.add.image(0, 0, this.blockTextureKey);
+    this.passiveEffectContainer.add(image);
+    this.fallingOverlaySprites.push(image);
+    this.visibleFallingOverlaySpriteCount += 1;
+
+    return image;
+  }
+
+  private hideUnusedFallingOverlaySprites() {
+    for (
+      let index = this.visibleFallingOverlaySpriteCount;
+      index < this.fallingOverlaySprites.length;
+      index += 1
+    ) {
+      this.fallingOverlaySprites[index].setVisible(false);
     }
   }
 
@@ -1130,6 +1487,79 @@ export class GameScene extends Phaser.Scene {
     return `${x}:${y}`;
   }
 
+  private getMayActive2IndicatorTargets() {
+    return this.engine.getMayActive2IndicatorTargets();
+  }
+
+  private drawMayActive2Indicators() {
+    const targets = this.getMayActive2IndicatorTargets();
+
+    if (targets.length === 0) {
+      return;
+    }
+
+    const pulse = 0.66 + Math.sin(this.time.now / 330) * 0.14;
+    const auraPulse = 0.5 + Math.sin(this.time.now / 220) * 0.5;
+    const fillAlpha = 0.07 + pulse * 0.05;
+    const glowAlpha = 0.12 + pulse * 0.09;
+    const auraAlpha = 0.07 + auraPulse * 0.09;
+    const outerRingAlpha = 0.52 + pulse * 0.16;
+    const innerRingAlpha = 0.34 + pulse * 0.14;
+    const dotAlpha = 0.48 + pulse * 0.12;
+
+    targets.forEach((target) => {
+      const { x, y, cellSize } = this.getVisibleCellPosition(target.x, target.y);
+      const inset = Math.max(1.8, cellSize * 0.1);
+      const innerInset = Math.max(3.5, cellSize * 0.17);
+      const dotRadius = Math.max(3, cellSize * 0.095);
+      const glowRadius = Math.max(dotRadius * 2.5, cellSize * 0.26);
+      const auraRadius = glowRadius + cellSize * (0.12 + auraPulse * 0.18);
+      const centerX = x + cellSize / 2;
+      const centerY = y + cellSize / 2;
+
+      this.mayIndicatorGraphics.fillStyle(0xff92d2, auraAlpha);
+      this.mayIndicatorGraphics.fillCircle(centerX, centerY, auraRadius);
+
+      this.mayIndicatorGraphics.fillStyle(0xffd8ee, fillAlpha);
+      this.mayIndicatorGraphics.fillRoundedRect(
+        x + innerInset,
+        y + innerInset,
+        cellSize - innerInset * 2,
+        cellSize - innerInset * 2,
+        Math.max(4, cellSize * 0.12),
+      );
+
+      this.mayIndicatorGraphics.fillStyle(0xff72b8, glowAlpha);
+      this.mayIndicatorGraphics.fillCircle(centerX, centerY, glowRadius);
+      this.mayIndicatorGraphics.lineStyle(
+        Math.max(1.8, cellSize * 0.072),
+        0xfff4fb,
+        outerRingAlpha,
+      );
+      this.mayIndicatorGraphics.strokeRoundedRect(
+        x + inset,
+        y + inset,
+        cellSize - inset * 2,
+        cellSize - inset * 2,
+        Math.max(4, cellSize * 0.14),
+      );
+      this.mayIndicatorGraphics.lineStyle(
+        Math.max(1.2, cellSize * 0.045),
+        0xff98cf,
+        innerRingAlpha,
+      );
+      this.mayIndicatorGraphics.strokeRoundedRect(
+        x + innerInset,
+        y + innerInset,
+        cellSize - innerInset * 2,
+        cellSize - innerInset * 2,
+        Math.max(4, cellSize * 0.1),
+      );
+      this.mayIndicatorGraphics.fillStyle(0xfff4fb, dotAlpha);
+      this.mayIndicatorGraphics.fillCircle(centerX, centerY, dotRadius);
+    });
+  }
+
   private getVisibleCellPosition(x: number, y: number) {
     const metrics = this.getBoardMetrics(this.scale.width, this.scale.height);
     const visibleY = y - HIDDEN_ROWS;
@@ -1139,6 +1569,180 @@ export class GameScene extends Phaser.Scene {
       y: metrics.boardY + visibleY * (metrics.cellSize + metrics.gap),
       cellSize: metrics.cellSize,
     };
+  }
+
+  private queueFallingOverlay(cells: Array<{ from: Point; to: Point }>) {
+    const startedAtMs = this.time.now;
+
+    this.fallingOverlayCells.push(
+      ...cells.map((cell) => ({
+        ...cell,
+        startedAtMs,
+        durationMs: MAY_PASSIVE_DROP_MS,
+      })),
+    );
+  }
+
+  private drawFallingOverlaySprites() {
+    if (this.fallingOverlayCells.length === 0) {
+      return;
+    }
+
+    const now = this.time.now;
+
+    this.fallingOverlayCells = this.fallingOverlayCells.filter((cell) => {
+      const progress = clamp01((now - cell.startedAtMs) / cell.durationMs);
+      const easedProgress = Phaser.Math.Easing.Cubic.Out(progress);
+      const start = this.getVisibleCellPosition(cell.from.x, cell.from.y);
+      const end = this.getVisibleCellPosition(cell.to.x, cell.to.y);
+      const sprite = this.getFallingOverlaySprite();
+      const inset = Math.max(1, Math.floor(start.cellSize * 0.06));
+
+      sprite.setPosition(
+        start.x + start.cellSize / 2,
+        start.y + start.cellSize / 2 + (end.y - start.y) * easedProgress,
+      );
+      sprite.setDisplaySize(
+        start.cellSize - inset * 2,
+        start.cellSize - inset * 2,
+      );
+      sprite.setAlpha(1 - progress * 0.02);
+      sprite.setVisible(true);
+
+      return progress < 1;
+    });
+  }
+
+  private renderMayUltimateAura(
+    boardPanelX: number,
+    boardPanelY: number,
+    boardPanelWidth: number,
+    boardPanelHeight: number,
+  ) {
+    const remainingMs = this.engine.snapshot.mayUltimateRemainingMs;
+
+    if (remainingMs <= 0) {
+      return;
+    }
+
+    const pulse = 0.5 + Math.sin(this.time.now / 280) * 0.5;
+    const progress = clamp01(remainingMs / MAY_ULTIMATE_DURATION_MS);
+    const outerAlpha = 0.08 + pulse * 0.06;
+    const innerAlpha = 0.16 + pulse * 0.08;
+    const borderAlpha = 0.2 + progress * 0.12 + pulse * 0.08;
+    const inset = uiPx(3);
+
+    this.ultimateAuraGraphics.fillStyle(0xff9bd4, outerAlpha);
+    this.ultimateAuraGraphics.fillRoundedRect(
+      boardPanelX - uiPx(4),
+      boardPanelY - uiPx(4),
+      boardPanelWidth + uiPx(8),
+      boardPanelHeight + uiPx(8),
+      uiPx(18),
+    );
+    this.ultimateAuraGraphics.fillStyle(0xfff1fa, innerAlpha);
+    this.ultimateAuraGraphics.fillRoundedRect(
+      boardPanelX + inset,
+      boardPanelY + inset,
+      boardPanelWidth - inset * 2,
+      boardPanelHeight - inset * 2,
+      uiPx(14),
+    );
+    this.ultimateAuraGraphics.lineStyle(
+      uiPx(2),
+      0xffeff9,
+      borderAlpha,
+    );
+    this.ultimateAuraGraphics.strokeRoundedRect(
+      boardPanelX - uiPx(1),
+      boardPanelY - uiPx(1),
+      boardPanelWidth + uiPx(2),
+      boardPanelHeight + uiPx(2),
+      uiPx(16),
+    );
+  }
+
+  private playMayUltimateCastEffect() {
+    const metrics = this.getBoardMetrics(this.scale.width, this.scale.height);
+    const boardPanelX = metrics.boardX - BOARD_PADDING;
+    const boardPanelY = metrics.boardY - BOARD_PADDING;
+    const boardPanelWidth = metrics.boardWidth + BOARD_PADDING * 2;
+    const boardPanelHeight = metrics.boardHeight + BOARD_PADDING * 2;
+    const centerX = boardPanelX + boardPanelWidth / 2;
+    const centerY = boardPanelY + boardPanelHeight / 2;
+    const ring = this.add.graphics();
+    const flare = this.add.graphics();
+
+    this.ultimateEffectContainer.add([flare, ring]);
+
+    this.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: 760,
+      ease: "Sine.easeOut",
+      onUpdate: (tween) => {
+        const progress = tween.getValue() ?? 1;
+        const ringWidth = boardPanelWidth * (0.4 + progress * 0.82);
+        const ringHeight = boardPanelHeight * (0.32 + progress * 0.78);
+
+        flare.clear();
+        flare.fillStyle(0xfff2fa, 0.2 * (1 - progress));
+        flare.fillRoundedRect(
+          boardPanelX,
+          boardPanelY,
+          boardPanelWidth,
+          boardPanelHeight,
+          uiPx(16),
+        );
+        flare.fillStyle(0xff9ad3, 0.12 * (1 - progress * 0.6));
+        flare.fillEllipse(
+          centerX,
+          centerY,
+          ringWidth * 0.9,
+          ringHeight * 0.9,
+        );
+
+        ring.clear();
+        ring.lineStyle(uiPx(5), 0xfffbff, 0.68 * (1 - progress));
+        ring.strokeEllipse(centerX, centerY, ringWidth, ringHeight);
+        ring.lineStyle(uiPx(2.5), 0xff9fd3, 0.54 * (1 - progress * 0.7));
+        ring.strokeEllipse(
+          centerX,
+          centerY,
+          ringWidth * 1.14,
+          ringHeight * 1.1,
+        );
+      },
+      onComplete: () => {
+        flare.destroy();
+        ring.destroy();
+      },
+    });
+
+    for (let index = 0; index < 18; index += 1) {
+      const sparkle = this.add.circle(
+        centerX + randomRange(-boardPanelWidth * 0.22, boardPanelWidth * 0.22),
+        centerY + randomRange(-boardPanelHeight * 0.16, boardPanelHeight * 0.16),
+        randomRange(uiPx(2), uiPx(5)),
+        0xffeff9,
+        0.8,
+      );
+
+      this.ultimateEffectContainer.add(sparkle);
+      this.tweens.add({
+        targets: sparkle,
+        x: sparkle.x + randomRange(-boardPanelWidth * 0.18, boardPanelWidth * 0.18),
+        y: sparkle.y + randomRange(-boardPanelHeight * 0.28, boardPanelHeight * 0.28),
+        alpha: 0,
+        scale: randomRange(1.2, 1.8),
+        duration: randomRange(520, 980),
+        ease: "Sine.easeOut",
+        delay: index * 14,
+        onComplete: () => {
+          sparkle.destroy();
+        },
+      });
+    }
   }
 
   private playMayPassiveEffect(
@@ -1164,21 +1768,15 @@ export class GameScene extends Phaser.Scene {
       const gravityKeys = new Set<string>([
         targetKey,
         ...appliedTarget.movedCells.map((cell) =>
-          this.getBoardCellKey(cell.from.x, cell.from.y),
-        ),
-        ...appliedTarget.movedCells.map((cell) =>
           this.getBoardCellKey(cell.to.x, cell.to.y),
         ),
       ]);
 
       gravityKeys.forEach((key) => this.passiveEffectHiddenCells.add(key));
-
-      appliedTarget.movedCells.forEach((cell) =>
-        this.playFallingClone(cell.from, cell.to),
-      );
+      this.queueFallingOverlay(appliedTarget.movedCells);
 
       const revealDelayMs =
-        appliedTarget.movedCells.length === 0 ? 80 : MAY_PASSIVE_DROP_MS + 80;
+        appliedTarget.movedCells.length === 0 ? 80 : MAY_PASSIVE_DROP_MS;
 
       this.time.delayedCall(revealDelayMs, () => {
         gravityKeys.forEach((key) => this.passiveEffectHiddenCells.delete(key));
@@ -1187,7 +1785,113 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private playMeltSprite(target: MayPassiveMeltTarget) {
+  private playMayMultiMeltEffect(
+    targets: MayMeltEffectTarget[],
+    applyGravity: () => MayPassiveMeltTarget | null,
+    onComplete?: () => void,
+  ) {
+    const targetKeys = targets.map((target) =>
+      this.getBoardCellKey(target.x, target.y),
+    );
+
+    targetKeys.forEach((key) => this.passiveEffectHiddenCells.add(key));
+    this.playMayColumnMeltEffect(targets);
+    targets.forEach((target) => {
+      this.playMeltSprite(target);
+      this.playMeltBubbles(target);
+    });
+
+    this.time.delayedCall(MAY_PASSIVE_EFFECT_MS + 40, () => {
+      const appliedTarget = applyGravity();
+
+      if (!appliedTarget) {
+        targetKeys.forEach((key) => this.passiveEffectHiddenCells.delete(key));
+        onComplete?.();
+        return;
+      }
+
+      const gravityKeys = new Set<string>([
+        ...targetKeys,
+        ...appliedTarget.movedCells.map((cell) =>
+          this.getBoardCellKey(cell.to.x, cell.to.y),
+        ),
+      ]);
+
+      gravityKeys.forEach((key) => this.passiveEffectHiddenCells.add(key));
+      this.queueFallingOverlay(appliedTarget.movedCells);
+
+      const revealDelayMs =
+        appliedTarget.movedCells.length === 0 ? 80 : MAY_PASSIVE_DROP_MS;
+
+      this.time.delayedCall(revealDelayMs, () => {
+        gravityKeys.forEach((key) => this.passiveEffectHiddenCells.delete(key));
+        onComplete?.();
+      });
+    });
+  }
+
+  private playMayColumnMeltEffect(targets: MayMeltEffectTarget[]) {
+    const sortedTargets = [...targets].sort((left, right) => right.y - left.y);
+
+    if (
+      sortedTargets.length < 2 ||
+      !sortedTargets.every((target) => target.x === sortedTargets[0].x)
+    ) {
+      return;
+    }
+
+    const start = this.getVisibleCellPosition(
+      sortedTargets[0].x,
+      sortedTargets[0].y,
+    );
+    const end = this.getVisibleCellPosition(
+      sortedTargets[sortedTargets.length - 1].x,
+      sortedTargets[sortedTargets.length - 1].y,
+    );
+    const stream = this.add.graphics();
+    const centerX = start.x + start.cellSize / 2;
+    const topY = end.y + end.cellSize * 0.18;
+    const bottomY = start.y + start.cellSize * 0.82;
+    const streamWidth = Math.max(8, start.cellSize * 0.34);
+
+    this.passiveEffectContainer.add(stream);
+
+    this.tweens.addCounter({
+      from: 0,
+      to: 1,
+      duration: MAY_PASSIVE_EFFECT_MS,
+      ease: "Sine.easeInOut",
+      onUpdate: (tween) => {
+        const progress = tween.getValue() ?? 1;
+        const frontY = bottomY - (bottomY - topY) * progress;
+
+        stream.clear();
+        stream.fillStyle(0xff9fd2, 0.2 + (1 - progress) * 0.12);
+        stream.fillRoundedRect(
+          centerX - streamWidth * 0.72,
+          frontY,
+          streamWidth * 1.44,
+          bottomY - frontY + start.cellSize * 0.18,
+          streamWidth,
+        );
+        stream.fillStyle(0xff5cae, 0.34 + (1 - progress) * 0.16);
+        stream.fillRoundedRect(
+          centerX - streamWidth / 2,
+          frontY,
+          streamWidth,
+          bottomY - frontY + start.cellSize * 0.14,
+          streamWidth,
+        );
+        stream.fillStyle(0xffeff9, 0.88 - progress * 0.3);
+        stream.fillCircle(centerX, frontY, Math.max(5, streamWidth * 0.58));
+      },
+      onComplete: () => {
+        stream.destroy();
+      },
+    });
+  }
+
+  private playMeltSprite(target: MayMeltEffectTarget) {
     const { x, y, cellSize } = this.getVisibleCellPosition(target.x, target.y);
     const textureSize = Math.max(12, Math.round(cellSize));
     const textureKey = `may-passive-melt-${this.time.now}-${target.x}-${target.y}`;
@@ -1340,7 +2044,7 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private playMeltBubbles(target: MayPassiveMeltTarget) {
+  private playMeltBubbles(target: MayMeltEffectTarget) {
     const { x, y, cellSize } = this.getVisibleCellPosition(target.x, target.y);
     const bubbleCount = 14;
     const streamCount = 3;
@@ -1405,36 +2109,6 @@ export class GameScene extends Phaser.Scene {
         });
       });
     }
-  }
-
-  private playFallingClone(
-    from: { x: number; y: number },
-    to: { x: number; y: number },
-  ) {
-    const start = this.getVisibleCellPosition(from.x, from.y);
-    const end = this.getVisibleCellPosition(to.x, to.y);
-    const image = this.add.image(
-      start.x + start.cellSize / 2,
-      start.y + start.cellSize / 2,
-      this.blockTextureKey,
-    );
-    const inset = Math.max(1, Math.floor(start.cellSize * 0.06));
-
-    image.setDisplaySize(
-      start.cellSize - inset * 2,
-      start.cellSize - inset * 2,
-    );
-    this.passiveEffectContainer.add(image);
-    this.tweens.add({
-      targets: image,
-      x: end.x + end.cellSize / 2,
-      y: end.y + end.cellSize / 2,
-      duration: MAY_PASSIVE_DROP_MS,
-      ease: "Cubic.easeOut",
-      onComplete: () => {
-        image.destroy();
-      },
-    });
   }
 
   private getGhostCells(board: Board, active: ActiveBlock) {
