@@ -9,11 +9,11 @@ export const page = style({
   overflowX: "hidden",
   overflowY: "hidden",
   display: "grid",
-  gridTemplateRows: "auto auto 1fr auto",
+  gridTemplateRows: "auto auto auto auto",
   justifyItems: "center",
   alignContent: "start",
-  gap: "clamp(10px, 1.2vh, 18px)",
-  padding: "clamp(18px, 2.5vh, 30px) clamp(16px, 4vw, 96px) 16px",
+  gap: "clamp(6px, 0.7vh, 10px)",
+  padding: "12px clamp(14px, 3vw, 48px) 8px",
   border: "4px solid transparent",
   borderImage: "var(--character-theme) 1",
   background:
@@ -45,11 +45,11 @@ export const backButtonIcon = style({
 });
 
 export const topSelectArea = style({
-  width: "min(100%, 1380px)",
+  width: "min(100%, 1280px)",
   display: "grid",
-  gridTemplateColumns: "220px minmax(0, 1fr)",
+  gridTemplateColumns: "172px minmax(0, 1fr)",
   alignItems: "center",
-  gap: "clamp(12px, 2vw, 28px)",
+  gap: "clamp(8px, 1vw, 14px)",
   marginTop: 0,
   "@media": {
     "(max-width: 860px)": {
@@ -79,7 +79,7 @@ export const carouselColumn = style({
 export const title = style({
   justifySelf: "center",
   alignSelf: "center",
-  fontSize: "clamp(26px, 2.2vw, 34px)",
+  fontSize: "clamp(22px, 1.8vw, 28px)",
   fontWeight: 900,
   letterSpacing: 0,
   whiteSpace: "nowrap",
@@ -93,52 +93,52 @@ export const title = style({
 
 export const carouselShell = style({
   width: "100%",
-  minHeight: "clamp(104px, 10vw, 148px)",
+  minHeight: "clamp(68px, 6vw, 84px)",
   display: "grid",
-  gridTemplateColumns: "44px minmax(0, 1fr) 44px",
+  gridTemplateColumns: "30px minmax(0, 1fr) 30px",
   alignItems: "center",
-  gap: "clamp(6px, 1vw, 12px)",
-  padding: "clamp(10px, 1.4vw, 18px)",
+  gap: "clamp(4px, 0.5vw, 8px)",
+  padding: "6px 8px",
   borderRadius: 12,
   background:
     "linear-gradient(#f8f8f8, #f8f8f8) padding-box, var(--character-theme) border-box",
   border: "3px solid transparent",
-  boxShadow: "0 10px 26px color-mix(in srgb, var(--character-accent) 16%, transparent)",
+  boxShadow:
+    "0 10px 26px color-mix(in srgb, var(--character-accent) 16%, transparent)",
   "@media": {
     "(max-width: 860px)": {
       gridTemplateColumns: "36px minmax(0, 1fr) 36px",
       padding: 10,
     },
     "(max-width: 1024px)": {
-      minHeight: "clamp(92px, 9vw, 120px)",
+      minHeight: "clamp(64px, 6.2vw, 78px)",
       gap: 8,
-      padding: "8px 10px",
+      padding: "6px 8px",
     },
   },
 });
 
 export const carouselCards = style({
   display: "grid",
-  gridTemplateColumns: "repeat(6, minmax(70px, 1fr))",
-  gap: "clamp(10px, 1.8vw, 32px)",
+  gridTemplateColumns: "repeat(6, minmax(48px, 1fr))",
+  gap: "clamp(6px, 0.7vw, 12px)",
   alignItems: "center",
   "@media": {
-    "(max-width: 1024px)": {
-      gridTemplateColumns: "repeat(3, minmax(58px, 1fr))",
-      gap: 8,
+    "(max-width: 960px)": {
+      gridTemplateColumns: "repeat(5, minmax(58px, 1fr))",
     },
-    "(max-width: 980px)": {
-      gridTemplateColumns: "repeat(3, minmax(58px, 1fr))",
+    "(max-width: 720px)": {
+      gridTemplateColumns: "repeat(4, minmax(52px, 1fr))",
     },
-    "(max-width: 520px)": {
-      gridTemplateColumns: "repeat(2, minmax(52px, 1fr))",
+    "(max-width: 600px)": {
+      gridTemplateColumns: "repeat(3, minmax(52px, 1fr))",
     },
   },
 });
 
 export const arrowButton = style({
   width: "100%",
-  height: 54,
+  height: 32,
   border: 0,
   background: "transparent",
   display: "grid",
@@ -162,16 +162,16 @@ export const arrowButton = style({
 });
 
 export const arrowButtonIcon = style({
-  width: "clamp(28px, 2.8vw, 40px)",
-  height: "clamp(28px, 2.8vw, 40px)",
+  width: "clamp(18px, 1.5vw, 24px)",
+  height: "clamp(18px, 1.5vw, 24px)",
   display: "block",
   objectFit: "contain",
   pointerEvents: "none",
   userSelect: "none",
   "@media": {
     "(max-width: 1024px)": {
-      width: 24,
-      height: 24,
+      width: 28,
+      height: 28,
     },
   },
 });
@@ -192,8 +192,8 @@ export const characterCard = style({
   },
   "@media": {
     "(max-width: 1024px)": {
-      padding: 6,
-      gap: 6,
+      padding: 4,
+      gap: 4,
     },
   },
 });
@@ -241,7 +241,8 @@ export const characterModalCardSelected = style({
 export const selectedCharacterCard = style({
   border: "3px solid var(--character-bg-accent)",
   background: "var(--character-soft)",
-  boxShadow: "0 0 0 3px color-mix(in srgb, var(--character-accent) 25%, transparent)",
+  boxShadow:
+    "0 0 0 3px color-mix(in srgb, var(--character-accent) 25%, transparent)",
 });
 
 export const cardImage = style({
@@ -303,19 +304,20 @@ export const openModalButton = style({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  gap: 12,
-  minWidth: "clamp(140px, 10vw, 190px)",
-  minHeight: "clamp(44px, 4vh, 56px)",
-  padding: "8px 18px",
+  gap: 8,
+  minWidth: "clamp(118px, 7vw, 150px)",
+  minHeight: "clamp(34px, 2.8vh, 40px)",
+  padding: "3px 14px",
   border: 0,
   borderRadius: 12,
   background: "var(--character-theme)",
   color: "#fff",
-  fontSize: "clamp(20px, 1.7vw, 26px)",
+  fontSize: "clamp(15px, 1.15vw, 18px)",
   fontWeight: 900,
   cursor: "pointer",
-  transform: "translateY(-6px)",
-  boxShadow: "0 8px 18px color-mix(in srgb, var(--character-accent) 28%, transparent)",
+  transform: "translateY(-1px)",
+  boxShadow:
+    "0 8px 18px color-mix(in srgb, var(--character-accent) 28%, transparent)",
   selectors: {
     "&:hover": {
       filter: "brightness(1.04)",
@@ -330,48 +332,65 @@ export const openModalButton = style({
 export const chevronDown = style({
   width: 0,
   height: 0,
-  borderLeft: "10px solid transparent",
-  borderRight: "10px solid transparent",
-  borderTop: "12px solid #fff",
+  borderLeft: "7px solid transparent",
+  borderRight: "7px solid transparent",
+  borderTop: "8px solid #fff",
 });
 
 export const detailArea = style({
-  width: "min(100%, 1140px)",
-  display: "grid",
-  gridTemplateColumns: "minmax(260px, 0.82fr) minmax(360px, 1fr)",
+  width: "fit-content",
+  maxWidth: "min(100%, 1240px)",
+  display: "flex",
+  flexDirection: "row",
   alignItems: "start",
-  gap: "clamp(18px, 3vw, 40px)",
-  marginTop: 0,
+  gap: "clamp(30px, 1.5vw, 30px)",
+  marginTop: -6,
+  marginLeft: "auto",
+  marginRight: "auto",
   "@media": {
-    "(max-width: 920px)": {
-      gridTemplateColumns: "1fr",
-      alignItems: "center",
-      justifyItems: "center",
-      gap: 12,
+    "(max-width: 960px)": {
+      width: "100%",
+      maxWidth: "min(100%, 980px)",
+      gap: 40,
     },
-    "(max-width: 1024px)": {
-      width: "min(100%, 980px)",
-      gap: 14,
+    "(max-width: 860px)": {
+      flexDirection: "column",
+      alignItems: "center",
+      gap: 40,
     },
   },
 });
 
 export const characterPreview = style({
-  width: "min(100%, 300px)",
-  height: "clamp(150px, 18vw, 210px)",
-  display: "grid",
-  alignItems: "end",
-  justifyItems: "center",
-  alignSelf: "start",
+  width: 264,
+  height: 400,
+  aspectRatio: "33 / 50",
+  minHeight: 400,
+  flex: "0 0 264px",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  padding: "10px 10px 8px",
+  boxSizing: "border-box",
+  borderRadius: 14,
+  background:
+    "linear-gradient(rgba(255,255,255,0.66), rgba(255,255,255,0.78)) padding-box, var(--character-theme) border-box",
+  border: "3px solid transparent",
+  overflow: "hidden",
   "@media": {
-    "(max-width: 920px)": {
-      width: "min(100%, 410px)",
-      height: "clamp(200px, 28vh, 320px)",
-      alignSelf: "center",
+    "(max-width: 960px)": {
+      width: 260,
+      height: 392,
+      aspectRatio: "65 / 98",
+      minHeight: 392,
+      flexBasis: 260,
     },
-    "(max-width: 1024px)": {
-      width: "min(100%, 380px)",
-      height: "clamp(190px, 26vh, 280px)",
+    "(max-width: 860px)": {
+      width: "min(100%, 360px)",
+      flex: "0 0 auto",
+      height: "clamp(300px, 78vw, 392px)",
+      aspectRatio: "65 / 98",
+      minHeight: "clamp(300px, 78vw, 392px)",
     },
   },
 });
@@ -379,68 +398,101 @@ export const characterPreview = style({
 export const characterImage = style({
   width: "100%",
   height: "100%",
+  maxWidth: "100%",
+  maxHeight: "100%",
   objectFit: "contain",
   objectPosition: "center bottom",
   userSelect: "none",
   pointerEvents: "none",
-  transform: "translateY(var(--preview-translate-y, 0px)) scale(var(--preview-scale, 1))",
+  display: "block",
+  transform:
+    "translateY(var(--preview-translate-y, 0px)) scale(var(--preview-scale, 1))",
   transformOrigin: "center bottom",
+  "@media": {
+    "(max-width: 860px)": {
+      transform:
+        "translateY(var(--preview-mobile-translate-y, var(--preview-translate-y, 0px))) scale(var(--preview-mobile-scale, var(--preview-scale, 1)))",
+    },
+  },
 });
 
 export const largePlaceholder = style({
-  width: "min(86vw, 360px)",
-  height: "min(70vw, 520px)",
+  width: "100%",
+  height: "100%",
   display: "grid",
   placeItems: "center",
-  borderRadius: 10,
-  background:
-    "linear-gradient(var(--character-soft), var(--character-soft)) padding-box, var(--character-theme) border-box",
-  border: "3px solid transparent",
+  borderRadius: 0,
+  background: "transparent",
+  border: 0,
   color: "var(--character-bg-accent)",
   fontSize: 28,
   fontWeight: 900,
 });
 
 export const emptyCharacterPreview = style({
-  width: "min(86vw, 300px)",
-  height: "min(70vw, 310px)",
+  width: "100%",
+  height: "100%",
   display: "grid",
   placeItems: "center",
-  border: "3px dashed transparent",
-  borderRadius: 12,
-  background:
-    "linear-gradient(rgba(255,255,255,0.74), rgba(255,255,255,0.9)) padding-box, var(--character-theme) border-box",
+  border: 0,
+  borderRadius: 0,
+  background: "transparent",
   color: "color-mix(in srgb, var(--character-accent) 64%, #111)",
   fontSize: "clamp(64px, 8vw, 104px)",
   fontWeight: 900,
-  boxShadow:
-    "inset 0 1px 0 rgba(255,255,255,0.9), 0 16px 28px color-mix(in srgb, var(--character-accent) 13%, transparent)",
+  boxShadow: "none",
 });
 
 export const infoColumn = style({
   width: "100%",
-  maxWidth: 640,
+  maxWidth: 720,
   minWidth: 0,
+  flex: "1 1 720px",
   display: "grid",
-  gap: "clamp(10px, 1.4vh, 16px)",
+  gridTemplateRows: "auto auto auto minmax(0, 1fr)",
+  alignContent: "start",
+  gap: "clamp(16px, 0.9vh, 20px)",
+  minHeight: 348,
+  alignSelf: "start",
   "@media": {
-    "(max-width: 1024px)": {
-      maxWidth: 860,
+    "(min-width: 961px)": {
+      width: "640px",
+      maxWidth: "640px",
+      minWidth: "640px",
+      flex: "0 0 640px",
+      height: 400,
+      minHeight: 400,
+      gridTemplateRows: "auto auto auto minmax(0, 1fr)",
+      gap: 18,
+    },
+    "(max-width: 960px)": {
+      flex: "1 1 auto",
+      maxWidth: "none",
+      minHeight: 392,
+    },
+    "(max-width: 860px)": {
+      minHeight: "clamp(300px, 78vw, 392px)",
     },
   },
 });
 
 export const nameRow = style({
   display: "grid",
-  gridTemplateColumns: "120px 1fr",
+  gridTemplateColumns: "92px 1fr",
   alignItems: "center",
-  gap: 22,
-  fontSize: "clamp(26px, 2.6vw, 38px)",
+  gap: 8,
+  fontSize: "clamp(21px, 1.8vw, 26px)",
   fontWeight: 900,
   lineHeight: 1.05,
   letterSpacing: 0,
   "@media": {
-    "(max-width: 1024px)": {
+    "(min-width: 961px)": {
+      gridTemplateColumns: "104px 1fr",
+      gap: 16,
+      fontSize: "clamp(26px, 2vw, 32px)",
+      lineHeight: 1.08,
+    },
+    "(max-width: 960px)": {
       fontSize: "clamp(24px, 3vw, 34px)",
     },
     "(max-width: 560px)": {
@@ -452,15 +504,21 @@ export const nameRow = style({
 
 export const personalityRow = style({
   display: "grid",
-  gridTemplateColumns: "120px 1fr",
+  gridTemplateColumns: "92px 1fr",
   alignItems: "center",
-  gap: 22,
-  fontSize: "clamp(18px, 1.8vw, 26px)",
+  gap: 8,
+  fontSize: "clamp(15px, 1.2vw, 19px)",
   fontWeight: 900,
   lineHeight: 1.1,
   letterSpacing: 0,
   "@media": {
-    "(max-width: 1024px)": {
+    "(min-width: 961px)": {
+      gridTemplateColumns: "104px 1fr",
+      gap: 16,
+      fontSize: "clamp(18px, 1.45vw, 22px)",
+      lineHeight: 1.2,
+    },
+    "(max-width: 960px)": {
       fontSize: "clamp(17px, 2.2vw, 24px)",
     },
     "(max-width: 560px)": {
@@ -472,15 +530,21 @@ export const personalityRow = style({
 
 export const skillRow = style({
   display: "grid",
-  gridTemplateColumns: "120px 1fr",
-  alignItems: "center",
-  gap: 22,
-  fontSize: "clamp(18px, 1.8vw, 26px)",
+  gridTemplateColumns: "92px 1fr",
+  alignItems: "start",
+  gap: 8,
+  fontSize: "clamp(15px, 1.2vw, 19px)",
   fontWeight: 900,
   lineHeight: 1.1,
   letterSpacing: 0,
   "@media": {
-    "(max-width: 1024px)": {
+    "(min-width: 961px)": {
+      gridTemplateColumns: "104px 1fr",
+      gap: 16,
+      fontSize: "clamp(18px, 1.45vw, 22px)",
+      lineHeight: 1.2,
+    },
+    "(max-width: 960px)": {
       fontSize: "clamp(17px, 2.2vw, 24px)",
     },
     "(max-width: 560px)": {
@@ -492,11 +556,15 @@ export const skillRow = style({
 
 export const skillSlots = style({
   display: "grid",
-  gridTemplateColumns: "repeat(5, clamp(40px, 4vw, 58px))",
-  gap: "clamp(8px, 1.2vw, 16px)",
+  gridTemplateColumns: "repeat(5, clamp(34px, 3vw, 48px))",
+  gap: "clamp(5px, 0.45vw, 8px)",
   alignItems: "center",
   "@media": {
-    "(max-width: 1024px)": {
+    "(min-width: 961px)": {
+      gridTemplateColumns: "repeat(5, clamp(48px, 3.4vw, 58px))",
+      gap: 10,
+    },
+    "(max-width: 960px)": {
       gridTemplateColumns: "repeat(5, clamp(34px, 5vw, 46px))",
       gap: 8,
     },
@@ -519,7 +587,7 @@ export const skillSlot = style({
   background:
     "linear-gradient(#f1f1f1, #f1f1f1) padding-box, var(--character-theme) border-box",
   color: "var(--character-bg-accent)",
-  fontSize: "clamp(13px, 1.1vw, 17px)",
+  fontSize: "clamp(12px, 0.9vw, 15px)",
   fontWeight: 900,
   cursor: "pointer",
   selectors: {
@@ -529,7 +597,11 @@ export const skillSlot = style({
     },
   },
   "@media": {
-    "(max-width: 1024px)": {
+    "(min-width: 961px)": {
+      borderRadius: 8,
+      fontSize: "clamp(13px, 0.95vw, 16px)",
+    },
+    "(max-width: 960px)": {
       fontSize: 13,
     },
   },
@@ -543,7 +615,7 @@ export const skillSlotImage = style({
   pointerEvents: "none",
   userSelect: "none",
   "@media": {
-    "(max-width: 1024px)": {
+    "(max-width: 960px)": {
       width: "70%",
       height: "70%",
     },
@@ -564,7 +636,13 @@ export const skillSlotIndex = style({
   lineHeight: 1,
   textAlign: "center",
   "@media": {
-    "(max-width: 1024px)": {
+    "(min-width: 961px)": {
+      right: 4,
+      bottom: 3,
+      minWidth: 20,
+      fontSize: 11,
+    },
+    "(max-width: 960px)": {
       minWidth: 16,
       fontSize: 9,
     },
@@ -575,7 +653,8 @@ export const selectedSkillSlot = style({
   border: "3px solid var(--character-bg-accent)",
   background:
     "linear-gradient(var(--character-soft), var(--character-soft)) padding-box, var(--character-theme) border-box",
-  boxShadow: "0 0 0 3px color-mix(in srgb, var(--character-accent) 20%, transparent)",
+  boxShadow:
+    "0 0 0 3px color-mix(in srgb, var(--character-accent) 20%, transparent)",
 });
 
 export const emptySkillSlot = style({
@@ -588,41 +667,64 @@ export const emptySkillSlot = style({
 });
 
 export const skillInfo = style({
-  minWidth: 0,
-  maxHeight: "clamp(180px, 24vh, 260px)",
+  width: "100%",
+  minHeight: 0,
+  maxHeight: "auto",
+  boxSizing: "border-box",
   overflowY: "auto",
   overflowX: "hidden",
   display: "grid",
-  gap: 12,
-  padding: "clamp(16px, 2vw, 24px)",
+  gap: 6,
+  marginTop: 2,
+  padding: "10px 12px",
   borderRadius: 12,
   background:
     "linear-gradient(color-mix(in srgb, var(--character-accent) 8%, #f0f0f0), #f0f0f0)",
-  border: "2px solid color-mix(in srgb, var(--character-accent) 26%, transparent)",
+  border:
+    "2px solid color-mix(in srgb, var(--character-accent) 26%, transparent)",
   color: "#050505",
   "@media": {
-    "(max-width: 1024px)": {
+    "(min-width: 961px)": {
+      alignContent: "start",
+      height: "100%",
+      gap: 14,
+      marginTop: 0,
+      padding: "18px 22px 20px",
+    },
+    "(max-width: 960px)": {
+      height: "100%",
       maxHeight: "none",
+      overflowY: "auto",
+      overflowX: "hidden",
     },
   },
 });
 
 export const emptySkillInfo = style({
   minWidth: 0,
-  minHeight: "clamp(170px, 20vh, 220px)",
+  minHeight: 0,
+  boxSizing: "border-box",
   display: "grid",
   alignContent: "center",
   justifyItems: "start",
-  gap: 10,
-  padding: "clamp(16px, 2vw, 24px)",
+  gap: 6,
+  padding: "10px 12px",
   border: "2px dashed color-mix(in srgb, var(--character-accent) 36%, #d9d9d9)",
   borderRadius: 12,
   background:
     "linear-gradient(rgba(255,255,255,0.68), rgba(255,255,255,0.88)), var(--character-theme)",
   color: "#111",
   "@media": {
-    "(max-width: 1024px)": {
-      minHeight: "unset",
+    "(min-width: 961px)": {
+      height: "100%",
+      minHeight: 0,
+      alignContent: "center",
+      gap: 10,
+      padding: "18px 22px 20px",
+    },
+    "(max-width: 960px)": {
+      height: "100%",
+      minHeight: 0,
     },
   },
 });
@@ -633,10 +735,14 @@ export const skillInfoTop = style({
   alignItems: "flex-start",
   justifyContent: "space-between",
   flexWrap: "wrap",
-  gap: 16,
+  gap: 6,
   "@media": {
-    "(max-width: 1024px)": {
-      gap: 10,
+    "(min-width: 961px)": {
+      gap: 12,
+      marginBottom: 2,
+    },
+    "(max-width: 960px)": {
+      gap: 8,
     },
   },
 });
@@ -645,22 +751,27 @@ export const skillType = style({
   display: "flex",
   minWidth: 0,
   alignItems: "center",
-  gap: 12,
+  gap: 4,
   flexWrap: "wrap",
-  fontSize: "clamp(28px, 2.2vw, 40px)",
+  fontSize: "clamp(18px, 1.35vw, 22px)",
   fontWeight: 900,
   lineHeight: 1.15,
   "@media": {
-    "(max-width: 1024px)": {
-      gap: 10,
-      fontSize: "clamp(22px, 2.4vw, 32px)",
+    "(min-width: 961px)": {
+      gap: 9,
+      fontSize: "clamp(20px, 1.55vw, 25px)",
+      lineHeight: 1.15,
+    },
+    "(max-width: 960px)": {
+      gap: 8,
+      fontSize: "clamp(18px, 2.4vw, 24px)",
     },
   },
 });
 
 export const skillTypeImage = style({
-  width: 48,
-  height: 48,
+  width: 34,
+  height: 34,
   borderRadius: 10,
   objectFit: "cover",
   objectPosition: "center",
@@ -669,9 +780,14 @@ export const skillTypeImage = style({
   userSelect: "none",
   boxShadow: "0 10px 16px rgba(0,0,0,0.1)",
   "@media": {
-    "(max-width: 1024px)": {
-      width: 42,
-      height: 42,
+    "(min-width: 961px)": {
+      width: 48,
+      height: 48,
+      borderRadius: 12,
+    },
+    "(max-width: 960px)": {
+      width: 40,
+      height: 40,
     },
   },
 });
@@ -690,13 +806,17 @@ export const videoControl = style({
   alignItems: "center",
   gap: 8,
   flexShrink: 0,
-  fontSize: "clamp(14px, 1vw, 18px)",
+  fontSize: "clamp(12px, 0.78vw, 14px)",
   fontWeight: 700,
   whiteSpace: "nowrap",
   "@media": {
-    "(max-width: 1024px)": {
+    "(min-width: 961px)": {
+      gap: 8,
+      fontSize: "clamp(12px, 0.92vw, 15px)",
+    },
+    "(max-width: 960px)": {
       gap: 6,
-      fontSize: 14,
+      fontSize: 13,
     },
   },
 });
@@ -704,30 +824,70 @@ export const videoControl = style({
 export const skillDescription = style({
   minWidth: 0,
   display: "grid",
-  gap: 8,
-  fontSize: "clamp(13px, 0.95vw, 16px)",
-  lineHeight: 1.35,
+  gap: 4,
+  fontSize: "13px",
+  lineHeight: 1.45,
   "@media": {
-    "(max-width: 1024px)": {
+    "(min-width: 961px)": {
+      gap: 8,
+      fontSize: "14px",
+      lineHeight: 1.42,
+    },
+    "(max-width: 960px)": {
       gap: 6,
-      fontSize: 13,
+      fontSize: 14,
+      lineHeight: 1.45,
+    },
+  },
+});
+
+export const descriptionTitle = style({
+  fontSize: "clamp(18px, 1.45vw, 22px)",
+  fontWeight: 900,
+  lineHeight: 1.12,
+  "@media": {
+    "(min-width: 961px)": {
+      fontSize: "clamp(22px, 1.65vw, 26px)",
+      lineHeight: 1.12,
+    },
+  },
+});
+
+export const descriptionBody = style({
+  margin: 0,
+  color: "#050505",
+  overflowWrap: "anywhere",
+  fontSize: "inherit",
+  lineHeight: "inherit",
+  "@media": {
+    "(min-width: 961px)": {
+      fontSize: "14px",
+      lineHeight: 1.42,
     },
   },
 });
 
 export const skillDetails = style({
   display: "grid",
-  gap: 6,
+  gap: 2,
   margin: 0,
   paddingLeft: 18,
   minWidth: 0,
   color: "#111",
-  fontSize: "clamp(12px, 0.95vw, 15px)",
-  lineHeight: 1.35,
+  fontSize: "13px",
+  lineHeight: 1.45,
   "@media": {
-    "(max-width: 1024px)": {
+    "(min-width: 961px)": {
+      gap: 5,
+      marginTop: -1,
+      paddingLeft: 22,
+      fontSize: "14px",
+      lineHeight: 1.42,
+    },
+    "(max-width: 960px)": {
       gap: 4,
-      fontSize: 12,
+      fontSize: 13,
+      lineHeight: 1.45,
     },
   },
 });
@@ -735,10 +895,26 @@ export const skillDetails = style({
 export const cooldownArea = style({
   minWidth: 0,
   display: "grid",
-  gap: 12,
+  gap: 4,
   "@media": {
-    "(max-width: 1024px)": {
+    "(min-width: 961px)": {
+      gap: 10,
+      paddingTop: 2,
+    },
+    "(max-width: 960px)": {
       gap: 8,
+    },
+  },
+});
+
+export const cooldownTitle = style({
+  fontSize: "clamp(18px, 1.45vw, 22px)",
+  fontWeight: 900,
+  lineHeight: 1.12,
+  "@media": {
+    "(min-width: 961px)": {
+      fontSize: "clamp(22px, 1.65vw, 26px)",
+      lineHeight: 1.12,
     },
   },
 });
@@ -746,31 +922,64 @@ export const cooldownArea = style({
 export const cooldownGrid = style({
   minWidth: 0,
   display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(54px, 1fr))",
-  gap: 8,
+  gridTemplateColumns: "repeat(auto-fit, minmax(40px, 1fr))",
+  gap: 3,
   "@media": {
-    "(max-width: 1024px)": {
-      gridTemplateColumns: "repeat(auto-fit, minmax(48px, 1fr))",
+    "(min-width: 961px)": {
+      gridTemplateColumns: "repeat(auto-fit, minmax(62px, 1fr))",
+      gap: 8,
+    },
+    "(max-width: 960px)": {
+      gridTemplateColumns: "repeat(auto-fit, minmax(46px, 1fr))",
     },
   },
 });
 
 export const cooldownItem = style({
   display: "grid",
-  gap: 4,
+  gap: 2,
   justifyItems: "center",
   minWidth: 0,
   color: "#050505",
   "@media": {
-    "(max-width: 1024px)": {
+    "(min-width: 961px)": {
+      gap: 6,
+    },
+    "(max-width: 960px)": {
       gap: 2,
     },
   },
 });
 
+export const cooldownValue = style({
+  fontSize: "clamp(14px, 1vw, 16px)",
+  fontWeight: 500,
+  lineHeight: 1.15,
+  whiteSpace: "nowrap",
+  "@media": {
+    "(min-width: 961px)": {
+      fontSize: "clamp(15px, 1.05vw, 18px)",
+    },
+  },
+});
+
+export const cooldownLevel = style({
+  fontSize: "clamp(11px, 0.82vw, 13px)",
+  color: "#050505",
+  lineHeight: 1.1,
+  whiteSpace: "nowrap",
+  "@media": {
+    "(min-width: 961px)": {
+      fontSize: "clamp(12px, 0.9vw, 14px)",
+    },
+  },
+});
+
 export const startButton = style({
-  width: "clamp(190px, 16vw, 250px)",
-  alignSelf: "end",
+  width: "clamp(150px, 12vw, 188px)",
+  alignSelf: "start",
+  justifySelf: "center",
+  marginTop: "clamp(8px, 0.9vh, 12px)",
   padding: 0,
   border: 0,
   background: "transparent",
@@ -793,7 +1002,7 @@ export const startButton = style({
     },
   },
   "@media": {
-    "(max-width: 1024px)": {
+    "(max-width: 960px)": {
       width: "clamp(170px, 24vw, 220px)",
       alignSelf: "center",
     },
@@ -821,7 +1030,7 @@ export const startButtonImage = style({
   pointerEvents: "none",
   userSelect: "none",
   "@media": {
-    "(max-width: 1024px)": {
+    "(max-width: 960px)": {
       width: "100%",
     },
   },
@@ -871,17 +1080,6 @@ globalStyle(`${videoControl} button:focus-visible`, {
   outlineOffset: 3,
 });
 
-globalStyle(`${skillDescription} strong`, {
-  fontSize: "clamp(20px, 1.7vw, 26px)",
-  fontWeight: 900,
-});
-
-globalStyle(`${skillDescription} p`, {
-  margin: 0,
-  color: "#050505",
-  overflowWrap: "anywhere",
-});
-
 globalStyle(`${emptySkillInfo} strong`, {
   fontSize: "clamp(24px, 2vw, 34px)",
   fontWeight: 900,
@@ -895,21 +1093,4 @@ globalStyle(`${emptySkillInfo} p`, {
   fontWeight: 700,
   lineHeight: 1.45,
   overflowWrap: "anywhere",
-});
-
-globalStyle(`${cooldownArea} > strong`, {
-  fontSize: "clamp(20px, 1.7vw, 26px)",
-  fontWeight: 900,
-});
-
-globalStyle(`${cooldownItem} span`, {
-  fontSize: "clamp(13px, 1vw, 17px)",
-  fontWeight: 500,
-  whiteSpace: "nowrap",
-});
-
-globalStyle(`${cooldownItem} small`, {
-  fontSize: "clamp(11px, 0.8vw, 14px)",
-  color: "#050505",
-  whiteSpace: "nowrap",
 });
