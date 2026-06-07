@@ -1,4 +1,4 @@
-import { globalStyle, style } from "@vanilla-extract/css";
+import { globalStyle, keyframes, style } from "@vanilla-extract/css";
 
 const paleSurface = "#f1f1f1";
 
@@ -1094,6 +1094,252 @@ export const modalGrid = style({
       gap: 12,
     },
   },
+});
+
+const keyboardGuideOverlayIn = keyframes({
+  from: {
+    opacity: 0,
+  },
+  to: {
+    opacity: 1,
+  },
+});
+
+const keyboardGuideModalIn = keyframes({
+  from: {
+    opacity: 0,
+    transform: "translateY(14px) scale(0.96)",
+  },
+  to: {
+    opacity: 1,
+    transform: "translateY(0) scale(1)",
+  },
+});
+
+export const keyboardGuideOverlay = style({
+  position: "fixed",
+  inset: 0,
+  zIndex: 100,
+  display: "grid",
+  placeItems: "center",
+  padding: "24px",
+  background:
+    "radial-gradient(circle at 50% 30%, rgba(255,255,255,0.22), transparent 34%), rgba(0,0,0,0.58)",
+  backdropFilter: "blur(8px)",
+  animation: `${keyboardGuideOverlayIn} 160ms ease both`,
+  "@media": {
+    "(max-width: 560px)": {
+      padding: "16px",
+      alignItems: "end",
+    },
+  },
+});
+
+export const keyboardGuideModal = style({
+  width: "min(100%, 560px)",
+  maxHeight: "min(760px, 88dvh)",
+  overflow: "hidden",
+  display: "grid",
+  gridTemplateRows: "auto minmax(0, 1fr) auto",
+  borderRadius: 24,
+  background:
+    "linear-gradient(#ffffff, #ffffff) padding-box, var(--character-theme) border-box",
+  border: "4px solid transparent",
+  boxShadow:
+    "0 28px 70px rgba(0,0,0,0.34), 0 0 38px color-mix(in srgb, var(--character-accent) 22%, transparent)",
+  animation: `${keyboardGuideModalIn} 180ms ease both`,
+  "@media": {
+    "(max-width: 560px)": {
+      width: "100%",
+      maxHeight: "86dvh",
+      borderRadius: "22px 22px 18px 18px",
+    },
+  },
+});
+
+export const keyboardGuideHeader = style({
+  display: "flex",
+  alignItems: "start",
+  justifyContent: "space-between",
+  gap: 16,
+  padding: "24px 26px 18px",
+  background:
+    "linear-gradient(135deg, color-mix(in srgb, var(--character-accent) 10%, #ffffff), #ffffff 54%)",
+  borderBottom:
+    "1px solid color-mix(in srgb, var(--character-accent) 18%, #e8e8e8)",
+  "@media": {
+    "(max-width: 560px)": {
+      padding: "20px 20px 16px",
+    },
+  },
+});
+
+export const keyboardGuideEyebrow = style({
+  display: "inline-flex",
+  alignItems: "center",
+  marginBottom: 4,
+  color: "color-mix(in srgb, var(--character-accent) 72%, #111)",
+  fontSize: 13,
+  fontWeight: 900,
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+});
+
+export const keyboardGuideTitle = style({
+  margin: 0,
+  color: "#111",
+  fontSize: "clamp(28px, 3vw, 42px)",
+  fontWeight: 900,
+  lineHeight: 1.08,
+  letterSpacing: "-0.04em",
+});
+
+export const keyboardGuideCloseButton = style({
+  width: 42,
+  height: 42,
+  flex: "0 0 auto",
+  display: "grid",
+  placeItems: "center",
+  padding: 0,
+  border: 0,
+  borderRadius: 999,
+  background: "#111",
+  color: "#fff",
+  fontSize: 30,
+  fontWeight: 700,
+  lineHeight: 1,
+  cursor: "pointer",
+  transition: "transform 140ms ease, filter 140ms ease",
+  selectors: {
+    "&:hover": {
+      transform: "scale(1.06)",
+      filter: "brightness(1.08)",
+    },
+    "&:active": {
+      transform: "scale(0.96)",
+    },
+    "&:focus-visible": {
+      outline: "3px solid #1497ff",
+      outlineOffset: 3,
+    },
+  },
+});
+
+export const keyboardGuideBody = style({
+  minHeight: 0,
+  overflowY: "auto",
+  display: "grid",
+  gap: 10,
+  padding: "20px 26px 22px",
+  background:
+    "linear-gradient(180deg, rgba(255,255,255,0.96), color-mix(in srgb, var(--character-accent) 5%, #ffffff))",
+  "@media": {
+    "(max-width: 560px)": {
+      gap: 9,
+      padding: "16px 18px 18px",
+    },
+  },
+});
+
+export const keyboardGuideRow = style({
+  display: "grid",
+  gridTemplateColumns: "118px minmax(0, 1fr)",
+  alignItems: "center",
+  gap: 16,
+  padding: "12px 14px",
+  borderRadius: 16,
+  background:
+    "linear-gradient(135deg, rgba(255,255,255,0.9), color-mix(in srgb, var(--character-accent) 7%, #ffffff))",
+  border: "1px solid color-mix(in srgb, var(--character-accent) 16%, #e9e9e9)",
+  boxShadow: "0 8px 18px rgba(0,0,0,0.05)",
+  "@media": {
+    "(max-width: 560px)": {
+      gridTemplateColumns: "92px minmax(0, 1fr)",
+      gap: 12,
+      padding: "11px 12px",
+      borderRadius: 14,
+    },
+  },
+});
+
+export const keyboardKey = style({
+  minHeight: 42,
+  display: "inline-grid",
+  placeItems: "center",
+  padding: "7px 12px",
+  borderRadius: 12,
+  background: "linear-gradient(180deg, #ffffff, #ececec)",
+  border: "1px solid #d9d9d9",
+  boxShadow: "inset 0 -3px 0 rgba(0,0,0,0.12), 0 6px 12px rgba(0,0,0,0.1)",
+  color: "#111",
+  fontFamily: '"Space Grotesk", "Noto Sans KR", sans-serif',
+  fontSize: "clamp(18px, 1.7vw, 24px)",
+  fontWeight: 900,
+  lineHeight: 1,
+  whiteSpace: "nowrap",
+  "@media": {
+    "(max-width: 560px)": {
+      minHeight: 38,
+      padding: "6px 9px",
+      fontSize: 17,
+    },
+  },
+});
+
+export const keyboardGuideText = style({
+  minWidth: 0,
+  display: "grid",
+  gap: 3,
+  color: "#111",
+});
+
+globalStyle(`${keyboardGuideText} strong`, {
+  fontSize: "clamp(16px, 1.3vw, 20px)",
+  fontWeight: 900,
+  lineHeight: 1.25,
+  letterSpacing: "-0.03em",
+});
+
+globalStyle(`${keyboardGuideText} span`, {
+  color: "#555",
+  fontSize: "clamp(12px, 0.95vw, 14px)",
+  fontWeight: 700,
+  lineHeight: 1.35,
+});
+
+export const keyboardGuideFooter = style({
+  margin: 0,
+  padding: "15px 26px 20px",
+  background: "#fff",
+  borderTop:
+    "1px solid color-mix(in srgb, var(--character-accent) 16%, #e8e8e8)",
+  color: "#444",
+  fontSize: "clamp(13px, 1vw, 15px)",
+  fontWeight: 800,
+  lineHeight: 1.45,
+  textAlign: "center",
+  "@media": {
+    "(max-width: 560px)": {
+      padding: "14px 18px 18px",
+    },
+  },
+});
+
+globalStyle(`${keyboardGuideFooter} kbd`, {
+  display: "inline-grid",
+  placeItems: "center",
+  minWidth: 34,
+  minHeight: 24,
+  margin: "0 3px",
+  padding: "2px 7px",
+  borderRadius: 7,
+  background: "#efefef",
+  border: "1px solid #d6d6d6",
+  boxShadow: "inset 0 -2px 0 rgba(0,0,0,0.1)",
+  color: "#111",
+  fontFamily: '"Space Grotesk", "Noto Sans KR", sans-serif',
+  fontSize: 13,
+  fontWeight: 900,
 });
 
 globalStyle(`${nameRow} strong`, {

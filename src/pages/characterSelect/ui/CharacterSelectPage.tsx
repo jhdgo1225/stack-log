@@ -55,6 +55,213 @@ const CHARACTER_PREVIEW_STYLE: Record<
   },
 };
 
+type KeyboardGuideModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+};
+
+const KEYBOARD_GUIDE_ITEMS = [
+  { keyName: "←", description: "왼쪽 이동" },
+  { keyName: "→", description: "오른쪽 이동" },
+  { keyName: "A", description: "90도 반시계 방향 회전" },
+  { keyName: "D", description: "90도 시계 방향 회전" },
+  { keyName: "S", description: "소프트 드롭" },
+  { keyName: "Space", description: "하드 드롭" },
+  { keyName: "Shift", description: "홀드" },
+  { keyName: "Q / W / E", description: "일반 스킬" },
+  { keyName: "R", description: "필살기" },
+  { keyName: "ESC", description: "일시정지" },
+  { keyName: "F1", description: "도움말", helper: "단축키, 스킬 설명 확인" },
+];
+
+function KeyboardGuideModal({ isOpen, onClose }: KeyboardGuideModalProps) {
+  if (!isOpen) {
+    return null;
+  }
+
+  return (
+    <div
+      role="presentation"
+      onMouseDown={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 100,
+        display: "grid",
+        placeItems: "center",
+        padding: 24,
+        background: "rgba(0,0,0,0.58)",
+        backdropFilter: "blur(8px)",
+      }}>
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="keyboard-guide-title"
+        onMouseDown={(event) => event.stopPropagation()}
+        style={{
+          width: "min(100%, 560px)",
+          maxHeight: "88dvh",
+          overflow: "hidden",
+          display: "grid",
+          gridTemplateRows: "auto minmax(0, 1fr) auto",
+          borderRadius: 24,
+          background: "#fff",
+          border: "4px solid #111",
+          boxShadow: "0 28px 70px rgba(0,0,0,0.34)",
+        }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "start",
+            justifyContent: "space-between",
+            gap: 16,
+            padding: "24px 26px 18px",
+            borderBottom: "1px solid #e8e8e8",
+          }}>
+          <div>
+            <span
+              style={{
+                display: "inline-flex",
+                marginBottom: 4,
+                color: "#3f628f",
+                fontSize: 13,
+                fontWeight: 900,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+              }}>
+              Input System
+            </span>
+
+            <h2
+              id="keyboard-guide-title"
+              style={{
+                margin: 0,
+                color: "#111",
+                fontSize: "clamp(28px, 3vw, 42px)",
+                fontWeight: 900,
+                lineHeight: 1.08,
+                letterSpacing: "-0.04em",
+              }}>
+              키보드 조작법
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="키보드 조작법 닫기"
+            style={{
+              width: 42,
+              height: 42,
+              flex: "0 0 auto",
+              display: "grid",
+              placeItems: "center",
+              padding: 0,
+              border: 0,
+              borderRadius: 999,
+              background: "#111",
+              color: "#fff",
+              fontSize: 30,
+              fontWeight: 700,
+              lineHeight: 1,
+              cursor: "pointer",
+            }}>
+            ×
+          </button>
+        </div>
+
+        <div
+          style={{
+            minHeight: 0,
+            overflowY: "auto",
+            display: "grid",
+            gap: 10,
+            padding: "20px 26px 22px",
+          }}>
+          {KEYBOARD_GUIDE_ITEMS.map((item) => (
+            <div
+              key={item.keyName}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "118px minmax(0, 1fr)",
+                alignItems: "center",
+                gap: 16,
+                padding: "12px 14px",
+                borderRadius: 16,
+                background: "#f8f8f8",
+                border: "1px solid #e5e5e5",
+              }}>
+              <kbd
+                style={{
+                  minHeight: 42,
+                  display: "inline-grid",
+                  placeItems: "center",
+                  padding: "7px 12px",
+                  borderRadius: 12,
+                  background: "linear-gradient(180deg, #ffffff, #ececec)",
+                  border: "1px solid #d9d9d9",
+                  boxShadow:
+                    "inset 0 -3px 0 rgba(0,0,0,0.12), 0 6px 12px rgba(0,0,0,0.1)",
+                  color: "#111",
+                  fontSize: 20,
+                  fontWeight: 900,
+                  lineHeight: 1,
+                  whiteSpace: "nowrap",
+                }}>
+                {item.keyName}
+              </kbd>
+
+              <div
+                style={{
+                  minWidth: 0,
+                  display: "grid",
+                  gap: 3,
+                  color: "#111",
+                }}>
+                <strong
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 900,
+                    lineHeight: 1.25,
+                    letterSpacing: "-0.03em",
+                  }}>
+                  {item.description}
+                </strong>
+
+                {item.helper ? (
+                  <span
+                    style={{
+                      color: "#555",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      lineHeight: 1.35,
+                    }}>
+                    {item.helper}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <p
+          style={{
+            margin: 0,
+            padding: "15px 26px 20px",
+            borderTop: "1px solid #e8e8e8",
+            color: "#444",
+            fontSize: 14,
+            fontWeight: 800,
+            lineHeight: 1.45,
+            textAlign: "center",
+          }}>
+          게임 중 <kbd>F1</kbd>을 누르면 조작법을 다시 확인할 수 있습니다.
+        </p>
+      </section>
+    </div>
+  );
+}
+
 export function CharacterSelectPage() {
   usePerformanceTrace("page.characterSelect");
   usePageTransitionTrace("character-select");
@@ -69,6 +276,15 @@ export function CharacterSelectPage() {
   const [isSkillVideoOpen, setIsSkillVideoOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [selectedSkillId, setSelectedSkillId] = useState<string | null>(null);
+  const [isKeyboardGuideOpen, setIsKeyboardGuideOpen] = useState(false);
+
+  const handleOpenKeyboardGuide = () => {
+    setIsKeyboardGuideOpen(true);
+  };
+
+  const handleCloseKeyboardGuide = () => {
+    setIsKeyboardGuideOpen(false);
+  };
 
   const selectedCharacter =
     CHARACTER_LIST.find((character) => character.id === selectedCharacterId) ??
@@ -158,26 +374,75 @@ export function CharacterSelectPage() {
       className={styles.page}
       style={themeStyle}
       aria-label="캐릭터 선택 화면">
-      <BackButton
-        className={styles.backButton}
-        icon={
-          <img
-            className={styles.backButtonIcon}
-            src="/assets/icons/arrow_back.svg"
-            alt=""
+      <div
+        style={{
+          width: "min(100%, 1280px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          justifySelf: "center",
+          zIndex: 2,
+        }}>
+        <BackButton
+          className={styles.backButton}
+          icon={
+            <img
+              className={styles.backButtonIcon}
+              src="/assets/icons/arrow_back.svg"
+              alt=""
+              aria-hidden="true"
+              draggable={false}
+            />
+          }
+          style={
+            {
+              "--back-button-bg": "var(--character-soft)",
+              "--back-button-hover-bg": "#f6f6f6",
+              "--back-button-outline": "#1497ff",
+            } as CSSProperties
+          }
+          onClick={handleBack}
+        />
+
+        <button
+          type="button"
+          onClick={handleOpenKeyboardGuide}
+          aria-label="키보드 조작법 보기"
+          style={{
+            minHeight: 42,
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+            padding: "8px 16px",
+            border: "2px solid #111",
+            borderRadius: 999,
+            background: "#fff",
+            color: "#111",
+            fontSize: 15,
+            fontWeight: 900,
+            cursor: "pointer",
+            boxShadow: "0 8px 18px rgba(0,0,0,0.12)",
+          }}>
+          <span
             aria-hidden="true"
-            draggable={false}
-          />
-        }
-        style={
-          {
-            "--back-button-bg": "var(--character-soft)",
-            "--back-button-hover-bg": "#f6f6f6",
-            "--back-button-outline": "#1497ff",
-          } as CSSProperties
-        }
-        onClick={handleBack}
-      />
+            style={{
+              minWidth: 34,
+              minHeight: 24,
+              display: "inline-grid",
+              placeItems: "center",
+              padding: "2px 8px",
+              borderRadius: 7,
+              background: "#111",
+              color: "#fff",
+              fontSize: 13,
+              fontWeight: 900,
+            }}>
+            F1
+          </span>
+          <span>조작법</span>
+        </button>
+      </div>
 
       <section className={styles.topSelectArea} aria-label="캐릭터 선택">
         <h1 className={styles.title}>캐릭터 선택</h1>
@@ -347,6 +612,11 @@ export function CharacterSelectPage() {
         character={selectedCharacter}
         skill={selectedSkill}
         onClose={handleCloseSkillVideo}
+      />
+
+      <KeyboardGuideModal
+        isOpen={isKeyboardGuideOpen}
+        onClose={handleCloseKeyboardGuide}
       />
     </main>
   );
