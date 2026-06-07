@@ -29,6 +29,8 @@ const visibleCharacters = CHARACTER_LIST.slice(0, 6);
 const defaultThemeGradient =
   "linear-gradient(90deg, #4BB9FF 0%, #8A5DFF 50%, #FF4DDC 100%)";
 
+const UNAVAILABLE_CHARACTER_IDS = ["bron", "aria"];
+
 const CHARACTER_PREVIEW_STYLE: Record<
   string,
   {
@@ -77,6 +79,13 @@ export function CharacterSelectPage() {
     selectedCharacter?.skills[0] ??
     null;
 
+  const isSelectedCharacterUnavailable =
+    selectedCharacter !== null &&
+    UNAVAILABLE_CHARACTER_IDS.includes(selectedCharacter.id);
+
+  const isStartButtonDisabled =
+    !selectedCharacter || isSelectedCharacterUnavailable;
+
   const modalCharacters = useMemo(() => {
     const keyword = search.trim().toLocaleLowerCase();
 
@@ -95,7 +104,7 @@ export function CharacterSelectPage() {
   });
 
   const handleStart = useMeasuredHandler("ui.characterSelect.start", () => {
-    if (!selectedCharacter) {
+    if (!selectedCharacter || isSelectedCharacterUnavailable) {
       return;
     }
 
@@ -148,8 +157,7 @@ export function CharacterSelectPage() {
     <main
       className={styles.page}
       style={themeStyle}
-      aria-label="캐릭터 선택 화면"
-    >
+      aria-label="캐릭터 선택 화면">
       <BackButton
         className={styles.backButton}
         icon={
@@ -178,8 +186,7 @@ export function CharacterSelectPage() {
             <button
               type="button"
               className={styles.arrowButton}
-              aria-label="이전 캐릭터 선택 항목"
-            >
+              aria-label="이전 캐릭터 선택 항목">
               <img
                 className={styles.arrowButtonIcon}
                 src={CAROUSEL_PREV_ICON}
@@ -206,8 +213,7 @@ export function CharacterSelectPage() {
             <button
               type="button"
               className={styles.arrowButton}
-              aria-label="다음 캐릭터 선택 항목"
-            >
+              aria-label="다음 캐릭터 선택 항목">
               <img
                 className={styles.arrowButtonIcon}
                 src={CAROUSEL_NEXT_ICON}
@@ -221,8 +227,7 @@ export function CharacterSelectPage() {
           <button
             type="button"
             className={styles.openModalButton}
-            onClick={() => setIsModalOpen(true)}
-          >
+            onClick={() => setIsModalOpen(true)}>
             전체 확인
             <span className={styles.chevronDown} aria-hidden="true" />
           </button>
@@ -281,23 +286,30 @@ export function CharacterSelectPage() {
         </div>
       </section>
 
-      <button
-        type="button"
-        className={classNames(
-          styles.startButton,
-          !selectedCharacter && styles.startButtonDisabled,
-        )}
-        onClick={handleStart}
-        aria-label="게임 시작"
-        disabled={!selectedCharacter}
-      >
-        <img
-          className={styles.startButtonImage}
-          src="/assets/main/game-start-btn.png"
-          alt=""
-          draggable={false}
-        />
-      </button>
+      <div className={styles.startButtonArea}>
+        <button
+          type="button"
+          className={classNames(
+            styles.startButton,
+            isStartButtonDisabled && styles.startButtonDisabled,
+          )}
+          onClick={handleStart}
+          aria-label="게임 시작"
+          disabled={isStartButtonDisabled}>
+          <img
+            className={styles.startButtonImage}
+            src="/assets/main/game-start-btn.png"
+            alt=""
+            draggable={false}
+          />
+        </button>
+
+        {isSelectedCharacterUnavailable ? (
+          <p className={styles.unavailableMessage}>
+            해당 캐릭터는 이용할 수 없습니다.
+          </p>
+        ) : null}
+      </div>
 
       <CharacterSelectModal
         isOpen={isModalOpen}
@@ -312,8 +324,7 @@ export function CharacterSelectPage() {
             "--character-select-modal-outline": "#1497ff",
             "--character-select-modal-width": "900px",
           } as CSSProperties
-        }
-      >
+        }>
         <div className={styles.modalGrid}>
           {modalCharacters.map((character) => (
             <CharacterCard
@@ -401,8 +412,7 @@ function CharacterCard({
       style={getCharacterCardStyle(isModalCard, character)}
       onClick={onClick}
       aria-label={`${character.name} 선택`}
-      aria-pressed={isSelected}
-    >
+      aria-pressed={isSelected}>
       {character.imageSrc ? (
         <img
           className={
@@ -451,8 +461,7 @@ function renderSkillSlotItems(
       )}
       aria-label={`${skill.name} 스킬 선택`}
       aria-pressed={skill.id === selectedSkillId}
-      onClick={() => onSelectSkill(skill.id)}
-    >
+      onClick={() => onSelectSkill(skill.id)}>
       <img
         className={styles.skillSlotImage}
         src={getCharacterSkillSrc(character.id, skill.type)}
@@ -508,8 +517,7 @@ function SkillInfo({
             type="button"
             className={styles.videoControlButton}
             onClick={onOpenVideo}
-            aria-label={`${skill.name} 설명 영상`}
-          >
+            aria-label={`${skill.name} 설명 영상`}>
             <img
               className={styles.videoControlIcon}
               src="/assets/icons/cam.svg"

@@ -1005,11 +1005,17 @@ export const cooldownLevel = style({
   },
 });
 
+export const startButtonArea = style({
+  display: "grid",
+  justifyItems: "center",
+  gap: 8,
+  "@media": {
+    "(max-width: 960px)": {},
+  },
+});
+
 export const startButton = style({
   width: "clamp(150px, 12vw, 188px)",
-  alignSelf: "start",
-  justifySelf: "center",
-  marginTop: "clamp(8px, 0.9vh, 12px)",
   padding: 0,
   border: 0,
   background: "transparent",
@@ -1034,7 +1040,6 @@ export const startButton = style({
   "@media": {
     "(max-width: 960px)": {
       width: "clamp(170px, 24vw, 220px)",
-      alignSelf: "center",
     },
   },
 });
@@ -1064,6 +1069,15 @@ export const startButtonImage = style({
       width: "100%",
     },
   },
+});
+
+export const unavailableMessage = style({
+  margin: 0,
+  color: "#d92d20",
+  fontSize: "clamp(13px, 1vw, 15px)",
+  fontWeight: 900,
+  lineHeight: 1.3,
+  textAlign: "center",
 });
 
 export const modalGrid = style({
