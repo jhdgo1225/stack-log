@@ -29,11 +29,26 @@ const defaultThemeGradient =
 
 const CHARACTER_PREVIEW_STYLE: Record<
   string,
-  { scale: number; translateY: number }
+  {
+    scale: number;
+    translateY: number;
+    mobileScale?: number;
+    mobileTranslateY?: number;
+  }
 > = {
-  may: { scale: 0.98, translateY: 4 },
-  bron: { scale: 1.08, translateY: 10 },
-  aria: { scale: 0.92, translateY: 2 },
+  may: { scale: 1, translateY: 0, mobileScale: 1, mobileTranslateY: 0 },
+  bron: {
+    scale: 1,
+    translateY: 0,
+    mobileScale: 1,
+    mobileTranslateY: 0,
+  },
+  aria: {
+    scale: 1.01,
+    translateY: 0,
+    mobileScale: 1.01,
+    mobileTranslateY: 0,
+  },
 };
 
 export function CharacterSelectPage() {
@@ -329,17 +344,21 @@ function getCharacterPreviewStyle(characterId: string): CSSProperties {
   const preset = CHARACTER_PREVIEW_STYLE[characterId] ?? {
     scale: 1,
     translateY: 0,
+    mobileScale: 1,
+    mobileTranslateY: 0,
   };
 
   return {
     "--preview-scale": String(preset.scale),
     "--preview-translate-y": `${preset.translateY}px`,
+    "--preview-mobile-scale": String(preset.mobileScale ?? preset.scale),
+    "--preview-mobile-translate-y": `${preset.mobileTranslateY ?? preset.translateY}px`,
   } as CSSProperties;
 }
 
 function EmptySkillInfo() {
   return (
-    <article className={styles.emptySkillInfo}>
+    <article className={classNames(styles.skillInfo, styles.emptySkillInfo)}>
       <strong>캐릭터를 선택해 주세요</strong>
       <p>캐릭터를 선택하면 이름, 개성, 스킬 정보가 이곳에 표시됩니다.</p>
     </article>
@@ -446,8 +465,8 @@ function SkillInfo({ skill }: { skill: CharacterSkill }) {
       </div>
 
       <div className={styles.skillDescription}>
-        <strong>설명</strong>
-        <p>{skill.description}</p>
+        <strong className={styles.descriptionTitle}>설명</strong>
+        <p className={styles.descriptionBody}>{skill.description}</p>
       </div>
 
       <ul className={styles.skillDetails}>
@@ -458,12 +477,12 @@ function SkillInfo({ skill }: { skill: CharacterSkill }) {
 
       {skill.cooldowns.length > 0 ? (
         <div className={styles.cooldownArea}>
-          <strong>쿨타임</strong>
+          <strong className={styles.cooldownTitle}>쿨타임</strong>
           <div className={styles.cooldownGrid}>
             {skill.cooldowns.map((cooldown) => (
               <div key={cooldown.level} className={styles.cooldownItem}>
-                <span>{cooldown.value}</span>
-                <small>{cooldown.level}</small>
+                <span className={styles.cooldownValue}>{cooldown.value}</span>
+                <small className={styles.cooldownLevel}>{cooldown.level}</small>
               </div>
             ))}
           </div>
