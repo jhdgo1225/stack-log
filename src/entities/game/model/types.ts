@@ -79,6 +79,7 @@ export type GameData = {
   targetScore: number | null;
   skillCooldowns: SkillCooldowns;
   skillCooldownMax: SkillCooldownMax;
+  mayPassiveCooldownRemainingMs: number;
   mayPrimedQDepth: number | null;
   mayUltimateRemainingMs: number;
   mayUltimateCastNonce: number;
