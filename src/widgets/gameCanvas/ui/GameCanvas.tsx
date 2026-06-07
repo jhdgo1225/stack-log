@@ -5,7 +5,15 @@ import * as Phaser from "phaser";
 import { GameScene } from "@/widgets/gameCanvas/model/phaserGameScene";
 import { usePerformanceTrace } from "@/shared/lib/performance/usePerformanceTrace";
 
-export const GameCanvas = () => {
+export const GameCanvas = ({
+  className,
+  isUltimateActive = false,
+  isUltimateCasting = false,
+}: {
+  className?: string;
+  isUltimateActive?: boolean;
+  isUltimateCasting?: boolean;
+}) => {
   usePerformanceTrace("widget.gameCanvas");
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -84,7 +92,9 @@ export const GameCanvas = () => {
   return (
     <div
       ref={containerRef}
-      className="phaser-board-shell"
+      className={["phaser-board-shell", className].filter(Boolean).join(" ")}
+      data-ultimate-active={isUltimateActive}
+      data-ultimate-cast={isUltimateCasting}
       aria-label="Game board"
     />
   );

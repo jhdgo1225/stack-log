@@ -40,6 +40,64 @@ const comboToastPop = keyframes({
   },
 });
 
+const skillPrimePulse = keyframes({
+  "0%, 100%": {
+    boxShadow:
+      "0 0 0 2px rgba(255, 206, 232, 0.95), 0 0 0 5px rgba(255, 126, 194, 0.42), 0 10px 18px rgba(38, 29, 18, 0.12)",
+    transform: "scale(1)",
+  },
+  "50%": {
+    boxShadow:
+      "0 0 0 2px rgba(255, 242, 249, 1), 0 0 0 7px rgba(255, 126, 194, 0.5), 0 0 22px rgba(255, 126, 194, 0.28), 0 10px 18px rgba(38, 29, 18, 0.12)",
+    transform: "scale(1.03)",
+  },
+});
+
+const ultimateCastGlow = keyframes({
+  "0%": {
+    opacity: 0.2,
+    transform: "scale(0.96)",
+    filter:
+      "drop-shadow(0 0 0 rgba(255, 168, 222, 0)) drop-shadow(0 0 0 rgba(255, 240, 249, 0))",
+  },
+  "35%": {
+    opacity: 1,
+    transform: "scale(1.03)",
+    filter:
+      "drop-shadow(0 0 18px rgba(255, 168, 222, 0.38)) drop-shadow(0 0 34px rgba(255, 240, 249, 0.34))",
+  },
+  "100%": {
+    opacity: 1,
+    transform: "scale(1)",
+    filter:
+      "drop-shadow(0 0 10px rgba(255, 168, 222, 0.22)) drop-shadow(0 0 20px rgba(255, 240, 249, 0.18))",
+  },
+});
+
+const ultimateAuraPulse = keyframes({
+  "0%, 100%": {
+    boxShadow:
+      "0 0 0 1px rgba(255, 244, 251, 0.55), 0 0 0 5px rgba(255, 167, 220, 0.18), 0 12px 24px rgba(38, 29, 18, 0.14)",
+  },
+  "50%": {
+    boxShadow:
+      "0 0 0 1px rgba(255, 250, 253, 0.74), 0 0 0 7px rgba(255, 167, 220, 0.26), 0 0 24px rgba(255, 194, 230, 0.18), 0 12px 24px rgba(38, 29, 18, 0.14)",
+  },
+});
+
+const ultimateBadgePulse = keyframes({
+  "0%, 100%": {
+    boxShadow:
+      "0 10px 20px rgba(82, 42, 67, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.55) inset",
+    transform: "translateY(0)",
+  },
+  "50%": {
+    boxShadow:
+      "0 12px 24px rgba(82, 42, 67, 0.16), 0 0 0 1px rgba(255, 255, 255, 0.72) inset, 0 0 20px rgba(255, 180, 225, 0.18)",
+    transform: "translateY(-1px)",
+  },
+});
+
 const failureBlockCollapse = keyframes({
   "0%": {
     opacity: 1,
@@ -184,6 +242,14 @@ globalStyle(".character-orbit", {
   justifySelf: "center",
   width: "100%",
   margin: 0,
+});
+
+globalStyle(".character-orbit--ultimate-cast .game-character", {
+  animation: `${ultimateCastGlow} 0.9s ease-out both`,
+});
+
+globalStyle(".character-orbit--ultimate-active .game-character", {
+  animation: `${ultimateAuraPulse} 1.8s ease-in-out infinite`,
 });
 
 globalStyle(".game-character", {
@@ -332,6 +398,64 @@ globalStyle(".combo-toast", {
   animation: `${comboToastPop} 1.2s ease both`,
 });
 
+globalStyle(".ultimate-status-badge", {
+  position: "absolute",
+  top: 40,
+  left: "50%",
+  zIndex: 7,
+  minWidth: 148,
+  display: "grid",
+  gridTemplateColumns: "auto auto",
+  alignItems: "center",
+  gap: "4px 10px",
+  padding: "7px 12px 8px",
+  borderRadius: 999,
+  background:
+    "linear-gradient(180deg, rgba(255, 249, 252, 0.94), rgba(255, 231, 244, 0.92))",
+  color: "#7b204e",
+  boxShadow:
+    "0 10px 20px rgba(82, 42, 67, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.55) inset",
+  transform: "translateX(-50%)",
+  animation: `${ultimateBadgePulse} 1.9s ease-in-out infinite`,
+  backdropFilter: "blur(8px)",
+});
+
+globalStyle(".ultimate-status-label", {
+  fontFamily: fontMono,
+  fontSize: "0.62rem",
+  letterSpacing: "0.08em",
+  textTransform: "uppercase",
+  color: "color-mix(in srgb, #7b204e 82%, #ffffff)",
+});
+
+globalStyle(".ultimate-status-badge strong", {
+  justifySelf: "end",
+  fontFamily: fontSans,
+  fontSize: "1rem",
+  lineHeight: 1,
+});
+
+globalStyle(".ultimate-status-progress", {
+  gridColumn: "1 / -1",
+  display: "block",
+  width: "100%",
+  height: 5,
+  overflow: "hidden",
+  borderRadius: 999,
+  background: "rgba(123, 32, 78, 0.1)",
+});
+
+globalStyle(".ultimate-status-progress-bar", {
+  display: "block",
+  width: "100%",
+  height: "100%",
+  borderRadius: "inherit",
+  background:
+    "linear-gradient(90deg, rgba(255, 129, 196, 0.92), rgba(255, 236, 247, 0.98))",
+  transformOrigin: "left center",
+  transform: "scaleX(calc(1 - var(--ultimate-progress, 0)))",
+});
+
 globalStyle(".skill-slots", {
   display: "grid",
   gridTemplateColumns: "repeat(5, var(--skill-slot-size, 56px))",
@@ -389,17 +513,60 @@ globalStyle(".skill-icon-timer", {
   display: "grid",
   placeItems: "center",
   borderRadius: 14,
-  border: "1px solid rgba(255, 255, 255, 0.28)",
-  background: "rgba(0, 0, 0, 0.62)",
+  overflow: "hidden",
   color: "#ffffff",
   fontFamily: fontMono,
   fontSize: "1rem",
   fontWeight: 800,
   textShadow: "0 1px 3px rgba(0, 0, 0, 0.58)",
   transform: "translateX(-50%)",
+  isolation: "isolate",
+});
+
+globalStyle(".skill-icon-timer::before", {
+  content: '""',
+  position: "absolute",
+  inset: 0,
+  borderRadius: 14,
+  border: "1px solid rgba(255, 255, 255, 0.28)",
+  background:
+    "conic-gradient(from 0deg, transparent 0turn, transparent calc(var(--cooldown-progress, 0) * 1turn), rgba(0, 0, 0, 0.76) calc(var(--cooldown-progress, 0) * 1turn), rgba(0, 0, 0, 0.76) 1turn)",
   backdropFilter: "blur(2px)",
   boxShadow:
     "inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 8px 16px rgba(0, 0, 0, 0.18)",
+  zIndex: 0,
+});
+
+globalStyle('.skill-icon-timer[data-tone="ultimate"]::before', {
+  borderColor: "rgba(255, 244, 251, 0.82)",
+  background:
+    "conic-gradient(from 0deg, rgba(255, 246, 252, 0.08) 0turn, rgba(255, 246, 252, 0.08) calc(var(--cooldown-progress, 0) * 1turn), rgba(255, 108, 187, 0.68) calc(var(--cooldown-progress, 0) * 1turn), rgba(255, 108, 187, 0.68) 1turn)",
+  boxShadow:
+    "inset 0 0 0 1px rgba(255, 255, 255, 0.24), 0 0 18px rgba(255, 154, 213, 0.18)",
+});
+
+globalStyle(".skill-icon-timer-value", {
+  position: "relative",
+  zIndex: 1,
+});
+
+globalStyle(".skill-icon-prime-badge", {
+  position: "absolute",
+  top: -4,
+  right: -5,
+  zIndex: 2,
+  minWidth: 22,
+  padding: "2px 5px",
+  borderRadius: 999,
+  background:
+    "linear-gradient(180deg, rgba(255, 231, 243, 0.98) 0%, rgba(255, 173, 214, 0.96) 100%)",
+  color: "#7b204e",
+  fontFamily: fontMono,
+  fontSize: "0.55rem",
+  fontWeight: 900,
+  lineHeight: 1,
+  letterSpacing: "-0.02em",
+  boxShadow: "0 6px 12px rgba(123, 32, 78, 0.22)",
 });
 
 globalStyle(".skill-key", {
@@ -419,12 +586,28 @@ globalStyle('.skill-slot[data-ready="true"]', {
 });
 
 globalStyle('.skill-slot[data-ready="false"] .skill-icon-image', {
-  filter: "grayscale(0.9) brightness(0.72)",
-  opacity: 0.78,
+  filter: "none",
+  opacity: 1,
 });
 
-globalStyle('.skill-slot[data-ready="false"] .skill-icon-timer', {
-  background: "rgba(0, 0, 0, 0.68)",
+globalStyle('.skill-slot[data-ready="false"] .skill-icon-timer::before', {
+  borderColor: "rgba(255, 255, 255, 0.3)",
+});
+
+globalStyle('.skill-slot[data-primed="true"] .skill-icon-shell', {
+  filter:
+    "drop-shadow(0 0 10px rgba(255, 122, 191, 0.35)) drop-shadow(0 0 18px rgba(255, 122, 191, 0.22))",
+});
+
+globalStyle('.skill-slot[data-primed="true"] .skill-icon-image', {
+  boxShadow:
+    "0 0 0 2px rgba(255, 206, 232, 0.95), 0 0 0 5px rgba(255, 126, 194, 0.42), 0 10px 18px rgba(38, 29, 18, 0.12)",
+  animation: `${skillPrimePulse} 1.2s ease-in-out infinite`,
+});
+
+globalStyle('.skill-slot[data-ultimate="true"] .skill-icon-image', {
+  boxShadow:
+    "0 0 0 2px rgba(255, 244, 251, 0.88), 0 0 0 5px rgba(255, 145, 206, 0.34), 0 0 18px rgba(255, 176, 223, 0.18), 0 10px 18px rgba(38, 29, 18, 0.12)",
 });
 
 globalStyle(".skill-passive-note", {
@@ -1123,6 +1306,22 @@ globalStyle(".phaser-board-shell", {
   border: "1px solid rgba(26, 23, 19, 0.2)",
   boxShadow: "inset 0 0 0 2px rgba(255, 255, 255, 0.5)",
   backdropFilter: "blur(8px)",
+});
+
+globalStyle('.phaser-board-shell[data-ultimate-active="true"]', {
+  boxShadow:
+    "inset 0 0 0 2px rgba(255, 255, 255, 0.5), 0 0 0 1px rgba(255, 225, 241, 0.5), 0 0 24px rgba(255, 184, 226, 0.12)",
+});
+
+globalStyle('.phaser-board-shell[data-ultimate-cast="true"]::after', {
+  content: '""',
+  position: "absolute",
+  inset: 0,
+  borderRadius: 14,
+  background:
+    "radial-gradient(circle at center, rgba(255, 244, 251, 0.4) 0%, rgba(255, 206, 232, 0.18) 28%, rgba(255, 206, 232, 0) 66%)",
+  pointerEvents: "none",
+  animation: `${ultimateCastGlow} 0.9s ease-out both`,
 });
 
 globalStyle(".phaser-board-shell canvas", {

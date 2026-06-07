@@ -47,6 +47,7 @@ export type ActiveBlock = {
 export type SkillKey = "Q" | "W" | "E" | "R";
 
 export type SkillCooldowns = Record<SkillKey, number>;
+export type SkillCooldownMax = Record<SkillKey, number>;
 
 export type SkillUses = Record<SkillKey, number>;
 
@@ -77,6 +78,10 @@ export type GameData = {
   maxCombo: number;
   targetScore: number | null;
   skillCooldowns: SkillCooldowns;
+  skillCooldownMax: SkillCooldownMax;
+  mayPrimedQDepth: number | null;
+  mayUltimateRemainingMs: number;
+  mayUltimateCastNonce: number;
   skillUses: SkillUses;
   obstacleElapsedMs: number;
   obstacleWarningMs: number;

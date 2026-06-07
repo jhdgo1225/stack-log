@@ -23,6 +23,7 @@ export type {
   Board,
   GameStatus,
   Point,
+  SkillCooldownMax,
   SkillCooldowns,
   SkillKey,
   SkillUses,
