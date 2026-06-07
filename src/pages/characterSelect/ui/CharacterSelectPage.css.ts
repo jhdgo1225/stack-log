@@ -821,6 +821,36 @@ export const videoControl = style({
   },
 });
 
+export const videoControlButton = style({
+  width: 38,
+  height: 38,
+  display: "grid",
+  placeItems: "center",
+  padding: 0,
+  border: 0,
+  borderRadius: 999,
+  background:
+    "linear-gradient(135deg, var(--character-accent), var(--character-bg-accent))",
+  boxShadow:
+    "0 10px 18px color-mix(in srgb, var(--character-accent) 24%, transparent)",
+  cursor: "pointer",
+  selectors: {
+    "&:hover": {
+      filter: "brightness(1.05)",
+    },
+    "&:focus-visible": {
+      outline: "3px solid #1497ff",
+      outlineOffset: 2,
+    },
+  },
+  "@media": {
+    "(min-width: 961px)": {
+      width: 42,
+      height: 42,
+    },
+  },
+});
+
 export const skillDescription = style({
   minWidth: 0,
   display: "grid",
